@@ -1,12 +1,18 @@
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
+
+from bot.services.user import create_user_if_not_exists
 from bot.keyboards.menu import get_main_menu
 
 router : Router = Router()
 
 @router.message(Command("start"))
 async def cmd_start(message: Message):
+    await create_user_if_not_exists(
+        user_id=message.from_user.id,
+        username=message.from_user.username or "Unknown"
+    )
     await message.answer(
         "<b>Добро пожаловать!</b>\n\n"
         "Я помогу тебе следить за питанием. Просто пришли фото, голос или текст с описанием еды.",

@@ -4,7 +4,7 @@ from uuid import UUID
 from datetime import datetime
 
 
-class Ingredient(BaseModel):
+class IngredientAnalysis(BaseModel):
     name: str = Field(..., description="Название ингредиента")
     weight: float = Field(..., description="Вес в граммах")
     calories: float = Field(..., description="Калории")
@@ -22,4 +22,4 @@ class MealAnalysis(BaseModel):
     fats: float = Field(..., description="Общее количество жиров")
     carbs: float = Field(..., description="Общее количество углеводов")
     fiber: float = Field(..., description="Общее количество клетчатки")
-    ingredients: List[Ingredient] = Field(..., description="Список ингредиентов")
+    ingredients: List[IngredientAnalysis] = Field(..., description="Список ингредиентов")
