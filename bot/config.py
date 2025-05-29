@@ -16,9 +16,10 @@ load_dotenv()
 # settings : Settings = Settings()
 
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_KEY")
-DB_URL = os.getenv("DATABASE_URL")
+BOT_TOKEN : str = os.getenv("BOT_TOKEN")
+OPENAI_KEY : str = os.getenv("OPENAI_KEY")
+DB_URL : str = os.getenv("DATABASE_URL")
+MAX_TOKENS : str = os.getenv("MAX_TOKENS", 1000)
 
 TORTOISE_ORM = {
     "connections": {
