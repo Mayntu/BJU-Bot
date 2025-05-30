@@ -1,7 +1,7 @@
 from bot.services.logger import logger
 from bot.config import MAX_TOKENS, BOT_MEAL_REPORT
 from bot.services.openai_client import client
-from bot.services.images_handler import upload_to_imgbb
+from bot.services.images_handler import get_image_bytes, upload_to_imgbb
 from db.models import User, Meal, Ingredient
 from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis
 from bot.prompts.food_analyze import get_food_analysis_system_prompt, get_food_analysis_user_prompt
@@ -56,8 +56,9 @@ async def get_food_analysis(image_url: str) -> MealAnalysis:
 
     # Проверяем, что ответ содержит необходимые данные
     if not completion.choices or not completion.choices[0].message.parsed:
-        logger.error("Не удалось получить результат анализа. Проверьте входные данные.")
-        raise ValueError("Не удалось получить результат анализа. Проверьте входные данные.")
+        error_message : str = "Не удалось получить результат анализа. Проверьте входные данные."
+        logger.error(error_message)
+        raise ValueError(error_message)
     
     logger.info(completion.choices[0].message.model_dump())
     
@@ -65,15 +66,16 @@ async def get_food_analysis(image_url: str) -> MealAnalysis:
 
 
 async def analyze_food_image(file_url : str, user_id : int) -> str:
-    # TODO: Загрузка изображения из телеграма в публичный доступ (например, IMGBB)
+    """
+    Загружает картинку на сторонний сервис, использует openai для анализа блюда и сохраняет результат в БД.
+    :param file_url: телеграм URL картинки блюда
+    :param user_id: ID пользователя, который отправил картинку
+    :return: Строка с результатом анализа блюда
+    """
+
 
     # Качаем байты изображения по file_url телеграма
-    async with aiohttp.ClientSession() as session:
-        async with session.get(file_url) as resp:
-            if resp.status != 200:
-                logger.error("Не удалось скачать изображение.")
-                return
-            image_bytes = await resp.read()
+    image_bytes : bytes = get_image_bytes(image_url=file_url)
 
     # Получаем публичную ссылку на изображение в Imgbb
     image_url = await upload_to_imgbb(image_bytes=image_bytes)

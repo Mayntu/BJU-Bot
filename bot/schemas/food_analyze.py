@@ -1,10 +1,11 @@
 from pydantic import BaseModel, Field
 from typing import List
-from uuid import UUID
-from datetime import datetime
 
 
 class IngredientAnalysis(BaseModel):
+    """
+    Модель для анализа ингредиента блюда.
+    """
     name: str = Field(..., description="Название ингредиента")
     weight: float = Field(..., description="Вес в граммах")
     calories: float = Field(..., description="Калории")
@@ -15,6 +16,9 @@ class IngredientAnalysis(BaseModel):
 
 
 class MealAnalysis(BaseModel):
+    """
+    Модель для анализа блюда.
+    """
     title: str = Field(..., description="Название блюда")
     total_weight: float = Field(..., description="Общий вес блюда")
     calories: float = Field(..., description="Общая калорийность")

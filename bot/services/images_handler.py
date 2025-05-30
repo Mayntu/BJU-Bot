@@ -2,6 +2,19 @@ from bot.config import IMGBB_API_KEY
 
 import aiohttp
 
+async def get_image_bytes(image_url: str) -> bytes:
+    """
+    Получает двоичные данные изображения по URL.
+
+    :param image_url: URL изображения
+    :return: Двоичные данные изображения
+    """
+    async with aiohttp.ClientSession() as session:
+        async with session.get(image_url) as resp:
+            if resp.status != 200:
+                raise RuntimeError(f"Ошибка получения изображения: {resp.status}")
+            return await resp.read()
+
 
 async def upload_to_imgbb(image_bytes: bytes) -> str:
     """
