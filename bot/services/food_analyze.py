@@ -1,10 +1,15 @@
-from bot.services.logger import logger
+from tempfile import NamedTemporaryFile
+
 from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT
+from bot.services.logger import logger
 from bot.services.openai_client import client
 from bot.services.images_handler import get_image_bytes, upload_to_imgbb
+from bot.services.voice_transcription import get_voice_path, transcribe_audio, close_voice_file
 from db.models import User, Meal, Ingredient
 from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis
 from bot.prompts.food_analyze import get_food_analysis_system_prompt, get_food_analysis_user_prompt, get_food_analysis_by_description_system_prompt, get_food_analysis_by_description_user_prompt
+
+import aiohttp
 
 
 async def analyze_food_image(file_url : str, user_id : int) -> str:
@@ -87,6 +92,50 @@ async def analyze_food_text(text : str, user_id : int) -> str:
     return result
 
 
+async def analyze_food_voice(file_url : str, user_id : int) -> str:
+    """
+    Анализирует голосовое сообщение с описанием блюда.
+    Использует OpenAI API для транскрипции и анализа.
+    
+    :param file_url: URL голосового сообщения
+    :param user_id: ID пользователя, который отправил голосовое сообщение
+    :return: Строка с результатом анализа блюда
+    """
+
+    # Получаем путь к аудиофайлу
+    voice_path : str = await get_voice_path(file_url=file_url)
+
+    # Транскрибируем аудиофайл с помощью whisper ai api
+    transcribed_text : str = await transcribe_audio(file_path=voice_path)
+
+    # Закрываем файл
+    await close_voice_file(file_path=voice_path)
+    
+    # Контекст для запроса к OpenAI
+    messages : list[dict] = [
+        {
+            "role": "system",
+            "content": get_food_analysis_by_description_system_prompt(),
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": get_food_analysis_by_description_user_prompt(description=transcribed_text),
+                }
+            ]
+        }
+    ]
+
+    # Получаем анализ блюда с помощью OpenAI API
+    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
+    
+    # Сохраняем анализ блюда в БД и формируем отчет
+    result : str = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
+    return result
+
+
 
 async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str = "gpt-4o") -> MealAnalysis:
     """
@@ -97,6 +146,7 @@ async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str
     :return: Объект MealAnalysis с результатами анализа
     """
     
+    logger.info("="*50)
     logger.info("Начинаем анализ блюда...")
     logger.info(f"Используем модель: {model}")
     logger.info(f"{max_tokens} токенов будет использовано для ответа.")
@@ -118,7 +168,6 @@ async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str
         raise ValueError(error_message)
     
     logger.info(completion.choices[0].message.model_dump())
-    logger.info("="*50)
     
     return completion.choices[0].message.parsed
 
@@ -169,4 +218,5 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         result += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
     
     logger.info(f"Для пользователя {user_id} было проанализировано блюдо: {meal.name} и сохранено в БД.")
+    logger.info("="*50)
     return result
