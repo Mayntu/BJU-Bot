@@ -19,7 +19,8 @@ load_dotenv()
 BOT_TOKEN : str = os.getenv("BOT_TOKEN")
 OPENAI_KEY : str = os.getenv("OPENAI_KEY")
 DB_URL : str = os.getenv("DATABASE_URL")
-MAX_TOKENS : str = os.getenv("MAX_TOKENS", 1000)
+MAX_IMAGE_TOKENS : str = int(os.getenv("MAX_IMAGE_TOKENS", 1000))
+MAX_DESCRIPTION_TOKENS : int = int(os.getenv("MAX_DESCRIPTION_TOKENS", 300))
 IMGBB_API_KEY : str = os.getenv("IMGBB_API_KEY")
 
 TORTOISE_ORM = {
