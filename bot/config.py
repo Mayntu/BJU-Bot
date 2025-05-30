@@ -20,7 +20,7 @@ BOT_TOKEN : str = os.getenv("BOT_TOKEN")
 OPENAI_KEY : str = os.getenv("OPENAI_KEY")
 DB_URL : str = os.getenv("DATABASE_URL")
 MAX_TOKENS : str = os.getenv("MAX_TOKENS", 1000)
-IMGUR_CLIENT_ID : str = os.getenv("IMGUR_CLIENT_ID", "client_id")  # https://api.imgur.com/oauth2/addclient
+IMGBB_API_KEY : str = os.getenv("IMGBB_API_KEY")
 
 TORTOISE_ORM = {
     "connections": {

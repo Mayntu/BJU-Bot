@@ -1,7 +1,7 @@
 from bot.services.logger import logger
 from bot.config import MAX_TOKENS, BOT_MEAL_REPORT
 from bot.services.openai_client import client
-from bot.services.images_handler import upload_to_imgur
+from bot.services.images_handler import upload_to_imgbb
 from db.models import User, Meal, Ingredient
 from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis
 from bot.prompts.food_analyze import get_food_analysis_system_prompt, get_food_analysis_user_prompt
@@ -65,21 +65,21 @@ async def get_food_analysis(image_url: str) -> MealAnalysis:
 
 
 async def analyze_food_image(file_url : str, user_id : int) -> str:
-    # TODO: Загрузка изображения из телеграма в публичный доступ (например, Imgur)
+    # TODO: Загрузка изображения из телеграма в публичный доступ (например, IMGBB)
 
-    # # Качаем байты изображения по file_url телеграма
-    # async with aiohttp.ClientSession() as session:
-    #     async with session.get(file_url) as resp:
-    #         if resp.status != 200:
-    #             logger.error("Не удалось скачать изображение.")
-    #             return
-    #         image_bytes = await resp.read()
+    # Качаем байты изображения по file_url телеграма
+    async with aiohttp.ClientSession() as session:
+        async with session.get(file_url) as resp:
+            if resp.status != 200:
+                logger.error("Не удалось скачать изображение.")
+                return
+            image_bytes = await resp.read()
 
-    # # Получаем публичную ссылку на изображение в Imgur
-    # imgur_url = await upload_to_imgur(image_bytes=image_bytes)
+    # Получаем публичную ссылку на изображение в Imgbb
+    image_url = await upload_to_imgbb(image_bytes=image_bytes)
 
     # Получаем анализ блюда с помощью OpenAI API
-    food_result : MealAnalysis = await get_food_analysis(image_url="https://i.imgur.com/fzzXPVr.jpeg")
+    food_result : MealAnalysis = await get_food_analysis(image_url=image_url)
 
     meal : Meal = Meal(
         user=await User.get(telegram_id=user_id),
