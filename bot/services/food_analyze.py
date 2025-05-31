@@ -1,4 +1,4 @@
-from uuid import UUID
+from openai import LengthFinishReasonError
 
 from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT
 from bot.services.logger import logger
@@ -133,7 +133,7 @@ async def analyze_food_voice(file_url : str, user_id : int) -> MealAnalysisResul
     ]
 
     # Получаем анализ блюда с помощью OpenAI API
-    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
+    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS, growth_tokens=300)
     
     # Сохраняем анализ блюда в БД и формируем отчет
     result : MealAnalysisResult = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
@@ -255,39 +255,59 @@ async def analyze_edit_food_voice(meal_id : str, file_url : str) -> MealAnalysis
 
 
 
-async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str = "gpt-4o") -> MealAnalysis:
+async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str = "gpt-4o", retries : int = 2, growth_tokens : int = 200) -> MealAnalysis:
     """
     Отправляет запрос к OpenAI API для анализа блюда.
     
     :param messages: Список сообщений для запроса
     :param max_tokens: Максимальное количество токенов для ответа
+    :param model: Модель OpenAI для использования
+    :param retries: Количество попыток запроса в случае ошибки
+    :param growth_tokens: Количество токенов, на которое будет увеличиваться max_tokens при повторных попытках
     :return: Объект MealAnalysis с результатами анализа
     """
+
+    # TODO: Сделать проверку на превышение лимита токенов openai
     
     logger.info("="*50)
     logger.info("Начинаем анализ блюда...")
     logger.info(f"Используем модель: {model}")
-    logger.info(f"{max_tokens} токенов будет использовано для ответа.")
+
+    attempt : int = 0
+
+    # Пытаемся получить ответ от openai с увеличением лимита токенов при необходимости
+    while attempt < retries:
+        try:
+            logger.info(f"{max_tokens} токенов будет использовано для ответа.")
+            
+            # Отправляем запрос к openai для анализа блюда
+            completion = await client.beta.chat.completions.parse(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                response_format=MealAnalysis,
+            )
+        
+            logger.info("Анализ завершен. Результат:")
+            
+            # Проверяем, что ответ содержит необходимые данные
+            if not completion.choices or not completion.choices[0].message.parsed:
+                error_message : str = "Ответ пустой или не разобран."
+                logger.error(error_message)
+                raise ValueError(error_message)
+        
+            logger.info(completion.choices[0].message.model_dump())
+            
+            return completion.choices[0].message.parsed
+        except LengthFinishReasonError as e:
+            logger.warning(f"Достигнут лимит токенов: {max_tokens}, увеличиваем лимит на {growth_tokens} токенов и пробуем снова")
+            max_tokens += growth_tokens
+            attempt += 1
+        except Exception as e:
+            logger.error(f"Ошибка при анализе блюда: {e}")
     
-    # Отправляем запрос к openai для анализа блюда
-    completion = await client.beta.chat.completions.parse(
-        model=model,
-        messages=messages,
-        max_tokens=max_tokens,
-        response_format=MealAnalysis,
-    )
-    
-    logger.info("Анализ завершен. Результат:")
-    
-    # Проверяем, что ответ содержит необходимые данные
-    if not completion.choices or not completion.choices[0].message.parsed:
-        error_message : str = "Не удалось получить результат анализа. Проверьте входные данные."
-        logger.error(error_message)
-        raise ValueError(error_message)
-    
-    logger.info(completion.choices[0].message.model_dump())
-    
-    return completion.choices[0].message.parsed
+    raise RuntimeError("Не удалось получить ответ от openai после нескольких попыток")
+
 
 
 async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id : int) -> MealAnalysisResult:
@@ -311,6 +331,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
     )
     await meal.save()
 
+    # Формируем отчет о блюде
     result : str = BOT_MEAL_REPORT.format(
         meal_name=meal.name,
         meal_weight=meal.total_weight,
@@ -321,6 +342,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         meal_fiber=meal.total_fiber,
     )
 
+    # Сохраняем ингредиенты в бд и формируем отчет по каждому ингредиенту
     for ingredient in meal_analysis.ingredients:
         ingredient_model : Ingredient = Ingredient(
             meal=meal,
