@@ -1,4 +1,4 @@
-from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT
 from bot.services.logger import logger
@@ -6,13 +6,18 @@ from bot.services.openai_client import client
 from bot.services.images_handler import get_image_bytes, upload_to_imgbb
 from bot.services.voice_transcription import get_voice_path, transcribe_audio, close_voice_file
 from db.models import User, Meal, Ingredient
-from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis
-from bot.prompts.food_analyze import get_food_analysis_system_prompt, get_food_analysis_user_prompt, get_food_analysis_by_description_system_prompt, get_food_analysis_by_description_user_prompt
+from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis, MealAnalysisResult
+from bot.prompts.food_analyze import (
+    get_food_analysis_system_prompt,
+    get_food_analysis_user_prompt,
+    get_food_analysis_by_description_system_prompt,
+    get_food_analysis_by_description_user_prompt,
+    edit_food_analysis_by_description_system_prompt,
+    edit_food_analysis_by_description_user_prompt,
+)
 
-import aiohttp
 
-
-async def analyze_food_image(file_url : str, user_id : int) -> str:
+async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResult:
     """
     Загружает картинку на сторонний сервис, использует openai для анализа блюда и сохраняет результат в БД.
     :param file_url: телеграм URL картинки блюда
@@ -52,12 +57,11 @@ async def analyze_food_image(file_url : str, user_id : int) -> str:
     meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_IMAGE_TOKENS)
 
     # Сохраняем анализ блюда в БД и формируем отчет
-    result : str = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
-
+    result : MealAnalysisResult = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
     return result
 
 
-async def analyze_food_text(text : str, user_id : int) -> str:
+async def analyze_food_text(text : str, user_id : int) -> MealAnalysisResult:
     """
     Анализирует описание блюда на состав и калории.
     Использует OpenAI API.
@@ -88,11 +92,11 @@ async def analyze_food_text(text : str, user_id : int) -> str:
     meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
     
     # Сохраняем анализ блюда в БД и формируем отчет
-    result : str = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
+    result : MealAnalysisResult = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
     return result
 
 
-async def analyze_food_voice(file_url : str, user_id : int) -> str:
+async def analyze_food_voice(file_url : str, user_id : int) -> MealAnalysisResult:
     """
     Анализирует голосовое сообщение с описанием блюда.
     Использует OpenAI API для транскрипции и анализа.
@@ -132,8 +136,122 @@ async def analyze_food_voice(file_url : str, user_id : int) -> str:
     meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
     
     # Сохраняем анализ блюда в БД и формируем отчет
-    result : str = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
+    result : MealAnalysisResult = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
     return result
+
+
+async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalysisResult:
+    """
+    Анализирует описание блюда на состав и калории, редактируя уже существующее блюдо.
+    Использует OpenAI API.
+    :param meal_id: ID блюда, которое нужно отредактировать
+    :param description: корректировка описания блюда
+    :return: MealAnalysisResult с отчетом о блюде
+    """
+
+    # Получаем оригинальное блюдо
+    original_meal : Meal = await Meal.get(id=meal_id).prefetch_related("ingredients")
+
+    # Создаём предыдущее описание блюда для контекста
+    prev_description : str = BOT_MEAL_REPORT.format(
+        meal_name=original_meal.name,
+        meal_weight=original_meal.total_weight,
+        meal_ccal=original_meal.total_calories,
+        meal_protein=original_meal.total_protein,
+        meal_fat=original_meal.total_fat,
+        meal_carb=original_meal.total_carbs,
+        meal_fiber=original_meal.total_fiber,
+    )
+
+    for ingredient in original_meal.ingredients:
+        prev_description += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
+    
+    # Контекст для запроса к openai
+    messages : list[dict] = [
+        {
+            "role": "system",
+            "content": edit_food_analysis_by_description_system_prompt(),
+        },
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": edit_food_analysis_by_description_user_prompt(
+                        prev_description=prev_description,
+                        description=description
+                    ),
+                }
+            ]
+        }
+    ]
+
+    # Получаем новый анализ блюда через openai
+    new_meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
+
+    # Удаляем старые ингредиенты из бд
+    await Ingredient.filter(meal=original_meal).delete()
+
+    # Апдейтаем оригинальное блюдо
+    original_meal.name = new_meal_analysis.title
+    original_meal.total_weight = new_meal_analysis.total_weight
+    original_meal.total_calories = new_meal_analysis.calories
+    original_meal.total_protein = new_meal_analysis.proteins
+    original_meal.total_fat = new_meal_analysis.fats
+    original_meal.total_carbs = new_meal_analysis.carbs
+    original_meal.total_fiber = new_meal_analysis.fiber
+
+    await original_meal.save()
+
+    # Формируем новый отчет о блюде
+    new_report : str = BOT_MEAL_REPORT.format(
+        meal_name=original_meal.name,
+        meal_weight=original_meal.total_weight,
+        meal_ccal=original_meal.total_calories,
+        meal_protein=original_meal.total_protein,
+        meal_fat=original_meal.total_fat,
+        meal_carb=original_meal.total_carbs,
+        meal_fiber=original_meal.total_fiber,
+    )
+
+    # Сохраняем новые ингредиенты в бд
+    for ingredient in new_meal_analysis.ingredients:
+        await Ingredient.create(
+            meal=original_meal,
+            name=ingredient.name,
+            weight=ingredient.weight,
+            calories=ingredient.calories,
+            protein=ingredient.protein,
+            fat=ingredient.fat,
+            carbs=ingredient.carbs,
+            fiber=ingredient.fiber
+        )
+        new_report += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
+
+    return MealAnalysisResult(report=new_report, meal_id=meal_id)
+
+
+async def analyze_edit_food_voice(meal_id : str, file_url : str) -> MealAnalysisResult:
+    """
+    Анализирует голосовое сообщение с описанием блюда, редактируя уже существующее блюдо.
+    Использует OpenAI API для транскрипции и анализа.
+    
+    :param meal_id: ID блюда, которое нужно отредактировать
+    :param file_url: URL голосового сообщения
+    :return: MealAnalysisResult с отчетом о блюде
+    """
+
+    # Получаем путь к аудиофайлу
+    voice_path : str = await get_voice_path(file_url=file_url)
+
+    # Транскрибируем аудиофайл с помощью whisper ai api
+    transcribed_text : str = await transcribe_audio(file_path=voice_path)
+
+    # Закрываем файл
+    await close_voice_file(file_path=voice_path)
+    
+    # Возвращаем результат анализа блюда, используя функцию для анализа текста
+    return await analyze_edit_food_text(meal_id=meal_id, description=transcribed_text)
 
 
 
@@ -172,7 +290,7 @@ async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str
     return completion.choices[0].message.parsed
 
 
-async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id : int) -> str:
+async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id : int) -> MealAnalysisResult:
     """
     Сохраняет анализ блюда в БД и формирует отчет.
     
@@ -219,4 +337,4 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
     
     logger.info(f"Для пользователя {user_id} было проанализировано блюдо: {meal.name} и сохранено в БД.")
     logger.info("="*50)
-    return result
+    return MealAnalysisResult(report=result, meal_id=meal.id)

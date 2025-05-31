@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from dataclasses import dataclass
 from typing import List
 
 
@@ -27,3 +28,12 @@ class MealAnalysis(BaseModel):
     carbs: float = Field(..., description="Общее количество углеводов")
     fiber: float = Field(..., description="Общее количество клетчатки")
     ingredients: List[IngredientAnalysis] = Field(..., description="Список ингредиентов")
+
+
+@dataclass
+class MealAnalysisResult:
+    """
+    Результат анализа блюда, содержащий отчёт и ID блюда.
+    """
+    report : str
+    meal_id : str
