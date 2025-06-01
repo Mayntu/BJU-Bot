@@ -1,9 +1,10 @@
+import pytz
+
 from datetime import datetime, timedelta
-from dateutil.tz import tzutc
 from tortoise.transactions import in_transaction
 from tortoise.functions import Sum
 
-from db.models import Meal, UserDailyReport
+from db.models import User, Meal, UserDailyReport, UserDailyMeal
 from bot.services.logger import logger
 
 
@@ -13,15 +14,35 @@ async def update_daily_report(ctx, user_id: str):
     :param ctx: Контекст задачи
     :param user_id: ID пользователя, для которого обновляется отчёт
     """
-    logger.info(f"Обновляем общую статистику для: {user_id}...")
+    logger.info(f"Обновляем дневной отчёт для пользователя: {user_id}...")
 
-    today = datetime.now(tz=tzutc()).replace(hour=0, minute=0, second=0, microsecond=0)
-    tomorrow = today + timedelta(days=1)
+    # Получаем пользователя и его таймзону
+    user = await User.get(id=user_id)
+    user_tz = pytz.timezone(user.timezone)
 
+    # Текущий момент в локальном времени пользователя
+    now_user_tz = datetime.now(user_tz)
+
+    # Начало и конец суток пользователя в его локальном времени
+    today_start = now_user_tz.replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow_start = today_start + timedelta(days=1)
+
+    # Переводим эти границы в UTC
+    today_start_utc = today_start.astimezone(pytz.UTC)
+    tomorrow_start_utc = tomorrow_start.astimezone(pytz.UTC)
+
+    # Получаем все приёмы пищи за эти сутки
+    meals = await Meal.filter(
+        user_id=user_id,
+        created_at__gte=today_start_utc,
+        created_at__lt=tomorrow_start_utc
+    ).order_by("created_at")
+
+    # Агрегируем общие показатели за день
     agg = await Meal.filter(
         user_id=user_id,
-        created_at__gte=today,
-        created_at__lt=tomorrow
+        created_at__gte=today_start_utc,
+        created_at__lt=tomorrow_start_utc
     ).annotate(
         total_weight=Sum("total_weight"),
         total_calories=Sum("total_calories"),
@@ -33,13 +54,12 @@ async def update_daily_report(ctx, user_id: str):
 
     totals = agg[0] if agg else {}
 
-    # Проверяем in_transaction, чтобы избежать конфликтов при параллельных обновлениях
     async with in_transaction():
-        # Удаляем предыдущий отчёт за сегодня, если он существует и создаём новый с актуальными данными
-        await UserDailyReport.filter(user_id=user_id, date=today).delete()
+        # Создаём новый дневной отчёт
+        await UserDailyReport.filter(user_id=user_id, date=today_start.date()).delete()
         await UserDailyReport.create(
             user_id=user_id,
-            date=today,
+            date=today_start.date(),
             total_weight=totals.get("total_weight") or 0,
             total_calories=totals.get("total_calories") or 0,
             total_protein=totals.get("total_protein") or 0,
@@ -48,4 +68,16 @@ async def update_daily_report(ctx, user_id: str):
             total_fiber=totals.get("total_fiber") or 0,
         )
 
-    logger.info(f"Дневной отчёт был обновлён для: {user_id} | дата: {today.date()}.")
+        # Обновляем список приёмов пищи
+        await UserDailyMeal.filter(user_id=user_id, date=today_start.date()).delete()
+
+        for i, meal in enumerate(meals, start=1):
+            await UserDailyMeal.create(
+                user_id=user_id,
+                date=today_start.date(),
+                name=meal.name,
+                calories=meal.total_calories,
+                order=i
+            )
+
+    logger.info(f"Обновлён дневной отчёт и список приёмов пищи для пользователя: {user_id} — {today_start.date()}")

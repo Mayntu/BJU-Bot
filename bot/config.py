@@ -35,6 +35,8 @@ TORTOISE_ORM = {
             "default_connection": "default",
         },
     },
+    "use_tz": True,
+    "timezone": "UTC",
 }
 
 BOT_MEAL_REPORT : str = """{meal_name}  
@@ -48,4 +50,13 @@ BOT_MEAL_REPORT : str = """{meal_name}
 Клетчатка: {meal_fiber} гр.  
 
 Состав:
+"""
+
+BOT_DAILY_MEAL_REPORT : str = """📊 Статистика за сегодня:
+Калории: {total_calories} ккал
+Белки: {total_proteins} г ({proteins_pct}%)
+Жиры: {total_fats} г ({fats_pct}%)
+Углеводы: {total_carbs} г ({carbs_pct}%)
+Клетчатка: {total_fiber} г\n
+🍽 Приемы пищи:
 """

@@ -3,7 +3,9 @@ from tortoise.fields import (
     BigIntField,
     FloatField,
     DatetimeField,
+    DateField,
     UUIDField,
+    IntField,
 
     ForeignKeyField,
 )
@@ -14,7 +16,7 @@ class User(Model):
     id = UUIDField(pk=True, default=uuid4)
     telegram_id = BigIntField(unique=True)
     username = CharField(max_length=255, unique=True)
-    # timezone = CharField(max_length=64, default="UTC")
+    timezone = CharField(max_length=64, default="UTC")
     # subscription = CharField(max_length=32, default="free")
 
     created_at = DatetimeField(auto_now_add=True)
@@ -69,7 +71,9 @@ class Ingredient(Model):
 class UserDailyReport(Model):
     id = UUIDField(pk=True, default=uuid4)
     user = ForeignKeyField("models.User", related_name="daily_reports")
-    date = DatetimeField()
+    date = DateField()
+
+    meal_name = CharField(max_length=255, null=True)
     
     total_weight = FloatField()
     total_calories = FloatField()
@@ -84,3 +88,19 @@ class UserDailyReport(Model):
     class Meta:
         table = "user_daily_reports"
         unique_together = ("user", "date")
+
+
+class UserDailyMeal(Model):
+    id = UUIDField(pk=True, default=uuid4)
+    user = ForeignKeyField("models.User", related_name="daily_meals")
+    date = DateField()
+    
+    name = CharField(max_length=255)
+    calories = FloatField()
+    order = IntField()
+
+    created_at = DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "user_daily_meals"
+        indexes = [("user", "date")]

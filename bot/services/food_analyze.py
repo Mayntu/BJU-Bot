@@ -1,11 +1,14 @@
+import pytz
+
+from datetime import datetime, time
 from openai import LengthFinishReasonError
 
-from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT
+from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT, BOT_DAILY_MEAL_REPORT
 from bot.services.logger import logger
 from bot.services.openai_client import client
 from bot.services.images_handler import get_image_bytes, upload_to_imgbb
 from bot.services.voice_transcription import get_voice_path, transcribe_audio, close_voice_file
-from db.models import User, Meal, Ingredient
+from db.models import User, Meal, Ingredient, UserDailyReport, UserDailyMeal
 from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis, MealAnalysisResult
 from bot.prompts.food_analyze import (
     get_food_analysis_system_prompt,
@@ -15,8 +18,6 @@ from bot.prompts.food_analyze import (
     edit_food_analysis_by_description_system_prompt,
     edit_food_analysis_by_description_user_prompt,
 )
-
-import asyncio
 
 
 async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResult:
@@ -256,24 +257,67 @@ async def analyze_edit_food_voice(meal_id : str, file_url : str) -> MealAnalysis
     return await analyze_edit_food_text(meal_id=meal_id, description=transcribed_text)
 
 
-async def get_daily_stats(user_id : str) -> str:
+async def get_daily_stats(user_id : int) -> str:
     """
     Получает статистику по блюдам пользователя за сегодня.
     
     :param user_id: ID пользователя
     :return: Строка с отчетом о блюдах пользователя за сегодня
     """
+    logger.info(f"Получаем статистику по блюдам пользователя {user_id} за сегодня...")
 
-    return ("📊 Статистика за сегодня:\n"
-        "Калории: x ккал\n"
-        "Белки: x г (x%)\n"
-        "Жиры: x г (x%)\n"
-        "Углеводы: x г (x%)\n"
-        "Клетчатка: x г\n\n"
-        "🍽 Приемы пищи:\n"
-        "1. Омлет с овощами – x ккал\n"
-        "2. Курица с рисом – x ккал"
+    user = await User.get(telegram_id=user_id)
+    user_tz = pytz.timezone(user.timezone)
+    logger.info(f"Таймзона пользователя: {user.timezone}")
+
+    # Получаем текущую дату в таймзоне пользователя
+    local_date = datetime.now(user_tz).date()
+
+    report = await UserDailyReport.get_or_none(
+        user_id=user.id,
+        date=local_date
     )
+
+    meals = await UserDailyMeal.filter(
+        user_id=user.id,
+        date=local_date
+    ).order_by("order")
+
+    if not report:
+        return "📊 Статистика за сегодня пока недоступна."
+
+    total_calories = report.total_calories or 1
+    protein_pct = round((report.total_protein * 4 / total_calories) * 100)
+    fat_pct = round((report.total_fat * 9 / total_calories) * 100)
+    carbs_pct = round((report.total_carbs * 4 / total_calories) * 100)
+
+    meals_text = "\n".join(
+        [f"{idx + 1}. {meal.name} – {int(meal.calories)} ккал" for idx, meal in enumerate(meals)]
+    ) or "Нет приёмов пищи на сегодня."
+
+    def format_float(value : float, digits : int = 1):
+        # Округляем, а если после округления .0, убираем
+        formatted = f"{value:.{digits}f}"
+        if formatted.endswith(".0"):
+            return formatted[:-2]
+        return formatted
+
+    result : str = BOT_DAILY_MEAL_REPORT.format(
+        total_calories=format_float(report.total_calories, 0),
+        total_proteins=format_float(report.total_protein),
+        total_fats=format_float(report.total_fat),
+        total_carbs=format_float(report.total_carbs),
+        total_fiber=format_float(report.total_fiber),
+        proteins_pct=protein_pct,
+        fats_pct=fat_pct,
+        carbs_pct=carbs_pct
+    )
+    result += meals_text
+    
+    logger.info(f"Статистика для пользователя {user_id} получена.")
+    logger.info("="*50)
+
+    return result
 
 
 
@@ -288,22 +332,6 @@ async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str
     :param growth_tokens: Количество токенов, на которое будет увеличиваться max_tokens при повторных попытках
     :return: Объект MealAnalysis с результатами анализа
     """
-
-    logger.info("Начинаем анализ блюда по запросу к openai...")
-    
-    await asyncio.sleep(0)
-
-    return MealAnalysis(
-        title="test",
-        total_weight=100,
-        calories=90,
-        proteins=0,
-        fats=0,
-        carbs=0,
-        fiber=0,
-        ingredients=[],
-    )
-
     # TODO: Сделать проверку на превышение лимита токенов openai
     
     logger.info("="*50)
