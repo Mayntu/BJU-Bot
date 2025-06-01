@@ -16,6 +16,8 @@ from bot.prompts.food_analyze import (
     edit_food_analysis_by_description_user_prompt,
 )
 
+import asyncio
+
 
 async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResult:
     """
@@ -254,6 +256,26 @@ async def analyze_edit_food_voice(meal_id : str, file_url : str) -> MealAnalysis
     return await analyze_edit_food_text(meal_id=meal_id, description=transcribed_text)
 
 
+async def get_daily_stats(user_id : str) -> str:
+    """
+    Получает статистику по блюдам пользователя за сегодня.
+    
+    :param user_id: ID пользователя
+    :return: Строка с отчетом о блюдах пользователя за сегодня
+    """
+
+    return ("📊 Статистика за сегодня:\n"
+        "Калории: x ккал\n"
+        "Белки: x г (x%)\n"
+        "Жиры: x г (x%)\n"
+        "Углеводы: x г (x%)\n"
+        "Клетчатка: x г\n\n"
+        "🍽 Приемы пищи:\n"
+        "1. Омлет с овощами – x ккал\n"
+        "2. Курица с рисом – x ккал"
+    )
+
+
 
 async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str = "gpt-4o", retries : int = 2, growth_tokens : int = 200) -> MealAnalysis:
     """
@@ -266,6 +288,21 @@ async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str
     :param growth_tokens: Количество токенов, на которое будет увеличиваться max_tokens при повторных попытках
     :return: Объект MealAnalysis с результатами анализа
     """
+
+    logger.info("Начинаем анализ блюда по запросу к openai...")
+    
+    await asyncio.sleep(0)
+
+    return MealAnalysis(
+        title="test",
+        total_weight=100,
+        calories=90,
+        proteins=0,
+        fats=0,
+        carbs=0,
+        fiber=0,
+        ingredients=[],
+    )
 
     # TODO: Сделать проверку на превышение лимита токенов openai
     
@@ -318,6 +355,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
     :param user_id: ID пользователя, который отправил описание
     :return: Строка с отчетом о блюде
     """
+    logger.info(f"Сохраняем блюдо {meal_analysis.title} в БД для пользователя {user_id}...")
     
     meal : Meal = Meal(
         user=await User.get(telegram_id=user_id),
@@ -329,8 +367,12 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         total_carbs=meal_analysis.carbs,
         total_fiber=meal_analysis.fiber,
     )
+    logger.info(f"Создано блюдо: {meal.name} с весом {meal.total_weight} гр. и калорийностью {meal.total_calories} ккал.")
     await meal.save()
+    logger.info(f"Блюдо {meal.name} успешно сохранено в БД с ID {meal.id}.")
 
+
+    logger.info("Формируем отчет о блюде...")
     # Формируем отчет о блюде
     result : str = BOT_MEAL_REPORT.format(
         meal_name=meal.name,
@@ -342,6 +384,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         meal_fiber=meal.total_fiber,
     )
 
+    logger.info("Сохраняем ингредиенты в БД и формируем отчет по каждому ингредиенту...")
     # Сохраняем ингредиенты в бд и формируем отчет по каждому ингредиенту
     for ingredient in meal_analysis.ingredients:
         ingredient_model : Ingredient = Ingredient(
@@ -357,6 +400,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         await ingredient_model.save()
         result += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
     
+    logger.info("Отчет сформирован.")
     logger.info(f"Для пользователя {user_id} было проанализировано блюдо: {meal.name} и сохранено в БД.")
     logger.info("="*50)
     return MealAnalysisResult(report=result, meal_id=meal.id)

@@ -1,4 +1,5 @@
 from tortoise import Tortoise
+
 from bot.config import DB_URL
 
 async def init_db():

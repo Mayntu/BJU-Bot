@@ -64,3 +64,23 @@ class Ingredient(Model):
     
     class Meta:
         table = "ingredients"
+
+
+class UserDailyReport(Model):
+    id = UUIDField(pk=True, default=uuid4)
+    user = ForeignKeyField("models.User", related_name="daily_reports")
+    date = DatetimeField()
+    
+    total_weight = FloatField()
+    total_calories = FloatField()
+    total_protein = FloatField()
+    total_fat = FloatField()
+    total_carbs = FloatField()
+    total_fiber = FloatField()
+
+    created_at = DatetimeField(auto_now_add=True)
+    updated_at = DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "user_daily_reports"
+        unique_together = ("user", "date")

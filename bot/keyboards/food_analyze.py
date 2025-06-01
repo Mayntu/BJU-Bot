@@ -1,5 +1,4 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from uuid import UUID
 
 
 def get_meal_action_keyboard(meal_id : str) -> InlineKeyboardMarkup:

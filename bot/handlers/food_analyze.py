@@ -1,8 +1,16 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 
-from bot.services.food_analyze import analyze_food_image, analyze_food_text, analyze_food_voice, analyze_edit_food_text, analyze_edit_food_voice
+from bot.services.food_analyze import (
+    analyze_food_image,
+    analyze_food_text,
+    analyze_food_voice,
+    analyze_edit_food_text,
+    analyze_edit_food_voice,
+    get_daily_stats
+)
 from bot.services.logger import logger
 from bot.keyboards.food_analyze import get_meal_action_keyboard
 from bot.schemas.food_analyze import MealAnalysisResult
@@ -68,6 +76,16 @@ async def meal_edit_callback(callback_query : CallbackQuery, state : FSMContext)
         text="✏️ Введите исправления для блюда (текстовое/голосовое сообщение):"
     )
     await callback_query.answer()
+
+
+
+# ------------------- Commands ------------------- #
+
+@router.message(Command("stats"))
+async def cmd_stats(message: Message):
+    # TODO: получить статистику из бд
+    result : str = await get_daily_stats(user_id=message.from_user.id)
+    await message.answer(text=result, parse_mode="HTML")
 
 
 

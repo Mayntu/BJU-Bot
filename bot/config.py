@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,10 +19,11 @@ load_dotenv()
 
 BOT_TOKEN : str = os.getenv("BOT_TOKEN")
 OPENAI_KEY : str = os.getenv("OPENAI_KEY")
+IMGBB_API_KEY : str = os.getenv("IMGBB_API_KEY")
 DB_URL : str = os.getenv("DATABASE_URL")
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 MAX_IMAGE_TOKENS : str = int(os.getenv("MAX_IMAGE_TOKENS", 1000))
 MAX_DESCRIPTION_TOKENS : int = int(os.getenv("MAX_DESCRIPTION_TOKENS", 300))
-IMGBB_API_KEY : str = os.getenv("IMGBB_API_KEY")
 
 TORTOISE_ORM = {
     "connections": {
