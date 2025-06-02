@@ -21,19 +21,32 @@ async def create_payment_ticket(user_id : int, subscription_title : str) -> Crea
     Создает платежный тикет и возвращает URL для оплаты.
     
     :param user_id: ID пользователя
-    :param subscription: Объект подписки
+    :param subscription_title: Название подписки
+    :raises ValueError: Если подписка с указанным названием не найдена
     :return: Объект ответа API с информацией о платеже
     """
     subscription : SubscriptionsStore = SubscriptionsStore.get_by_title(title=subscription_title)
     if not subscription:
         raise ValueError(f"Подписка с названием '{subscription_title}' не найдена.")
     
+    # Создаем запись о платеже в базе данных
+    logger.info(f"Создание платежного тикета для пользователя {user_id} с подпиской {subscription.title}")
     payment : Payment = await create_payment_db(user_id, subscription)
+
+    # Получаем платежный тикет ЮKassa
+    logger.info(f"Получение платежного тикета для платежа {payment.id}")
     ticket : APIPaymentResponse = await get_ticket(payment.id)
+
     return CreatePaymentTicketResponse(ticket.confirmation.confirmation_url, payment.id)
 
 
 async def create_payment_db(user_id : int, subscription : SubscriptionsStore) -> Payment:
+    """
+    Создает запись о платеже в базе данных.
+    :param user_id: ID пользователя
+    :param subscription: Объект подписки
+    :return: Объект Payment
+    """
     now_utc = datetime.now(pytz_UTC).date()
     end_utc = now_utc + relativedelta(months=subscription.duration_month)
     
@@ -49,10 +62,16 @@ async def create_payment_db(user_id : int, subscription : SubscriptionsStore) ->
             user=await User.get(telegram_id=user_id),
             user_subscription_id=user_subscription.id
         )
+        logger.info(f"Платеж создан: {payment.id} для пользователя {user_id} с подпиской {subscription.title}")
         return payment
 
 
 async def get_ticket(payment_id : str) -> APIPaymentResponse:
+    """
+    Получает платежный тикет ЮKassa по ID платежа.
+    :param payment_id: ID платежа
+    :return: Объект ответа API с информацией о платеже
+    """
     payment : Payment = await Payment.get_or_none(id=payment_id).select_related("user_subscription")
     ticket : APIPaymentResponse = YooPayment.create({
         "amount": {
@@ -66,6 +85,7 @@ async def get_ticket(payment_id : str) -> APIPaymentResponse:
         "capture": True,
         "description": f"Подписка {payment.user_subscription.plan} {payment.user_subscription.price} {payment.user_subscription.currency}",
     }, uuid4())
+    logger.info(f"Создан платежный тикет: {ticket.id} для платежа {payment_id}")
     logger.info(payment)
     payment.yookassa_payment_id = ticket.id
     payment.save()
@@ -79,16 +99,21 @@ async def check_payment_status(payment_id : str) -> bool:
     :param payment_id: ID платежа
     :return: True, если платеж успешен, иначе False
     """
+    # Получаем платеж из базы данных
     payment : Payment = await Payment.get_or_none(id=payment_id)
     if not payment:
         raise ValueError(f"Платеж с ID {payment_id} не найден.")
     
+    # Проверяем, завершен ли платеж
+    logger.info(f"Проверка статуса платежа {payment_id}...")
     if payment.status == "completed":
         logger.info(f"Платеж {payment_id} уже завершен.")
         return True
 
+    # Получаем ответ от ЮKassa API
     yookassa_response : APIPaymentResponse = YooPayment.find_one(payment.yookassa_payment_id)
 
+    # Проверяем статус платежа
     if yookassa_response.status == "succeeded":
         payment.status = "pending"
         await payment.save()

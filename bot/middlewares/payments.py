@@ -9,6 +9,10 @@ from bot.keyboards.menu import get_subscriptions_menu
 
 
 class SubscriptionMiddleware(BaseMiddleware):
+    """
+    Middleware для проверки активности подписки пользователя.
+    Если подписка не активна, отправляет сообщение и прерывает выполнение хендлера.
+    """
     async def __call__(self, handler, event, data):
         user_id = None
         
@@ -18,10 +22,10 @@ class SubscriptionMiddleware(BaseMiddleware):
             user_id = event.from_user.id
         
         if user_id is None:
-            # если нет user_id
+            # Если нет user_id
             return await handler(event, data)
         
-        # получаем Payment пользователя с успешной подпиской и активным периодом
+        # Получаем Payment пользователя с успешной подпиской и активным периодом
         now_utc = datetime.now(pytz.UTC).date()
         payment = await Payment.filter(
             user__telegram_id=user_id,
@@ -31,7 +35,7 @@ class SubscriptionMiddleware(BaseMiddleware):
         ).first()
         
         if not payment:
-            # нет действующей подписки — отправляем сообщение и прерываем
+            # Нет действующей подписки — отправляем сообщение и прерываем
             if isinstance(event, CallbackQuery):
                 await event.answer("❌ Подписка не активна. Пожалуйста, оплатите подписку. /subscribe", show_alert=True)
                 await event.message.answer("Ваша подписка не активна. Перейдите в меню подписок.")
@@ -39,5 +43,5 @@ class SubscriptionMiddleware(BaseMiddleware):
                 await event.answer("❌ Подписка не активна. Пожалуйста, оплатите подписку. /subscribe")
             return
         
-        # всё ок, подписка активна — вызываем хендлер дальше
+        # Всё ок, подписка активна — вызываем хендлер дальше
         return await handler(event, data)

@@ -30,6 +30,10 @@ YOOKASSA_SECRET_KEY : str = os.getenv("YOOKASSA_SECRET_KEY")
 
 
 class SubscriptionsStore(Enum):
+    """
+    Enum для хранения тарифов подписок.
+    Каждый тариф содержит название, цену и длительность в месяцах.
+    """
     BASIC = ("basic", 1500, 1)
     PRO = ("pro", 3500, 1)
 
