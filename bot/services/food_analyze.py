@@ -395,9 +395,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         total_carbs=meal_analysis.carbs,
         total_fiber=meal_analysis.fiber,
     )
-    logger.info(f"Создано блюдо: {meal.name} с весом {meal.total_weight} гр. и калорийностью {meal.total_calories} ккал.")
     await meal.save()
-    logger.info(f"Блюдо {meal.name} успешно сохранено в БД с ID {meal.id}.")
 
 
     logger.info("Формируем отчет о блюде...")
@@ -412,7 +410,6 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         meal_fiber=meal.total_fiber,
     )
 
-    logger.info("Сохраняем ингредиенты в БД и формируем отчет по каждому ингредиенту...")
     # Сохраняем ингредиенты в бд и формируем отчет по каждому ингредиенту
     for ingredient in meal_analysis.ingredients:
         ingredient_model : Ingredient = Ingredient(
@@ -428,7 +425,6 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
         await ingredient_model.save()
         result += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
     
-    logger.info("Отчет сформирован.")
     logger.info(f"Для пользователя {user_id} было проанализировано блюдо: {meal.name} и сохранено в БД.")
     logger.info("="*50)
     return MealAnalysisResult(report=result, meal_id=meal.id)
