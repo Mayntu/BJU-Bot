@@ -15,10 +15,11 @@ from bot.services.logger import logger
 from bot.keyboards.food_analyze import get_meal_action_keyboard
 from bot.schemas.food_analyze import MealAnalysisResult
 from bot.states.food_analyze import FoodAnalyzeState
+from bot.middlewares.payments import SubscriptionMiddleware
 
 
 router : Router = Router()
-
+# router.message.middleware(SubscriptionMiddleware())
 
 
 # ------------------- FSM States ------------------- #

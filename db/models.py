@@ -2,6 +2,7 @@ from tortoise.fields import (
     CharField,
     BigIntField,
     FloatField,
+    DecimalField,
     DatetimeField,
     DateField,
     UUIDField,
@@ -104,3 +105,33 @@ class UserDailyMeal(Model):
     class Meta:
         table = "user_daily_meals"
         indexes = [("user", "date")]
+
+
+class UserSubscription(Model):
+    id = UUIDField(pk=True, default=uuid4)
+    user = ForeignKeyField("models.User", related_name="subscriptions")
+    plan = CharField(max_length=32) # free, basic, pro
+    price = DecimalField(max_digits=10, decimal_places=2)
+    currency = CharField(max_length=32, default="RUB")
+    start_date = DateField()
+    end_date = DateField(null=True)
+
+    created_at = DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "user_subscriptions"
+        indexes = [("user", "plan")]
+
+
+class Payment(Model):
+    id = UUIDField(pk=True, default=uuid4)
+    user = ForeignKeyField("models.User", related_name="payments")
+    user_subscription = ForeignKeyField("models.UserSubscription", related_name="payments")
+    status = CharField(max_length=32, default="pending")  # pending, completed, failed
+    yookassa_payment_id = CharField(max_length=64, null=True, unique=True)
+
+    created_at = DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "payments"
+        unique_together = ("user", "created_at")
