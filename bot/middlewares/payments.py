@@ -28,7 +28,7 @@ class SubscriptionMiddleware(BaseMiddleware):
         # Получаем Payment пользователя с успешной подпиской и активным периодом
         now_utc = datetime.now(pytz.UTC).date()
         payment = await Payment.filter(
-            user__telegram_id=user_id,
+            user__id=user_id,
             status="succeeded",
             user_subscription__start_date__lte=now_utc,
             user_subscription__end_date__gte=now_utc

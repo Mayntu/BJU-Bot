@@ -4,8 +4,7 @@ from tortoise import BaseDBAsyncClient
 async def upgrade(db: BaseDBAsyncClient) -> str:
     return """
         CREATE TABLE IF NOT EXISTS "users" (
-    "id" UUID NOT NULL PRIMARY KEY,
-    "telegram_id" BIGINT NOT NULL UNIQUE,
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "username" VARCHAR(255) NOT NULL UNIQUE,
     "timezone" VARCHAR(64) NOT NULL DEFAULT 'UTC',
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -20,7 +19,7 @@ CREATE TABLE IF NOT EXISTS "meals" (
     "total_carbs" DOUBLE PRECISION NOT NULL,
     "total_fiber" DOUBLE PRECISION NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "user_id" UUID NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE
+    "user_id" BIGINT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "ingredients" (
     "id" UUID NOT NULL PRIMARY KEY,
@@ -41,7 +40,7 @@ CREATE TABLE IF NOT EXISTS "user_daily_meals" (
     "calories" DOUBLE PRECISION NOT NULL,
     "order" INT NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "user_id" UUID NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE
+    "user_id" BIGINT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS "idx_user_daily__user_id_afe428" ON "user_daily_meals" ("user_id", "date");
 CREATE TABLE IF NOT EXISTS "user_daily_reports" (
@@ -56,7 +55,7 @@ CREATE TABLE IF NOT EXISTS "user_daily_reports" (
     "total_fiber" DOUBLE PRECISION NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "user_id" UUID NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
+    "user_id" BIGINT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
     CONSTRAINT "uid_user_daily__user_id_c93729" UNIQUE ("user_id", "date")
 );
 CREATE TABLE IF NOT EXISTS "user_subscriptions" (
@@ -67,8 +66,7 @@ CREATE TABLE IF NOT EXISTS "user_subscriptions" (
     "start_date" DATE NOT NULL,
     "end_date" DATE,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "user_id" UUID NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
-    CONSTRAINT "uid_user_subscr_user_id_ea7936" UNIQUE ("user_id", "plan", "start_date")
+    "user_id" BIGINT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS "idx_user_subscr_user_id_a6797b" ON "user_subscriptions" ("user_id", "plan");
 CREATE TABLE IF NOT EXISTS "payments" (
@@ -76,7 +74,7 @@ CREATE TABLE IF NOT EXISTS "payments" (
     "status" VARCHAR(32) NOT NULL DEFAULT 'pending',
     "yookassa_payment_id" VARCHAR(64) UNIQUE,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "user_id" UUID NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
+    "user_id" BIGINT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
     "user_subscription_id" UUID NOT NULL REFERENCES "user_subscriptions" ("id") ON DELETE CASCADE,
     CONSTRAINT "uid_payments_user_id_d6dc35" UNIQUE ("user_id", "created_at")
 );

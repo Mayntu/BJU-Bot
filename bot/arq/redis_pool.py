@@ -14,5 +14,5 @@ async def close_redis_pool():
     global redis_pool
     if redis_pool:
         redis_pool.close()
-        await redis_pool.wait_closed()
+        # await redis_pool.wait_closed()
         redis_pool = None

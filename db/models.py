@@ -14,8 +14,7 @@ from tortoise.models import Model
 from uuid import uuid4
 
 class User(Model):
-    id = UUIDField(pk=True, default=uuid4)
-    telegram_id = BigIntField(unique=True)
+    id = BigIntField(pk=True)
     username = CharField(max_length=255, unique=True)
     timezone = CharField(max_length=64, default="UTC")
     # subscription = CharField(max_length=32, default="free")
@@ -23,7 +22,7 @@ class User(Model):
     created_at = DatetimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"telegram id: {self.telegram_id}"
+        return f"telegram id: {self.id}"
 
     class Meta:
         table = "users"

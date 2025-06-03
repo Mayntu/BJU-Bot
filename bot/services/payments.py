@@ -52,14 +52,14 @@ async def create_payment_db(user_id : int, subscription : SubscriptionsStore) ->
     
     async with in_transaction():
         user_subscription : UserSubscription = await UserSubscription.create(
-            user=await User.get(telegram_id=user_id),
+            user=await User.get(id=user_id),
             plan=subscription.title,
             price=subscription.price,
             start_date=now_utc,
             end_date=end_utc
         )
         payment : Payment = await Payment.create(
-            user=await User.get(telegram_id=user_id),
+            user=await User.get(id=user_id),
             user_subscription_id=user_subscription.id
         )
         logger.info(f"Платеж создан: {payment.id} для пользователя {user_id} с подпиской {subscription.title}")

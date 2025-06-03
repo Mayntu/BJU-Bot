@@ -148,7 +148,7 @@ async def handle_photo(message : Message):
     try:
         result : MealAnalysisResult = await analyze_food_image(file_url=photo_url, user_id=message.from_user.id)
     except Exception as e:
-        result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None)
+        result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None, False)
         logger.error(f"Ошибка при анализе фото: {e}")
     
     text : str = result.report
@@ -173,7 +173,7 @@ async def handle_text(message : Message):
             user_id=message.from_user.id
         )
     except Exception as e:
-        result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None)
+        result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None, False)
         logger.error(f"Ошибка при анализе текста: {e}")
     
     text : str = result.report
@@ -204,7 +204,7 @@ async def handle_voice(message : Message):
             user_id=message.from_user.id
         )
     except Exception as e:
-        result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None)
+        result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None, False)
         logger.error(f"Ошибка при анализе голоса: {e}")
     
     text : str = result.report

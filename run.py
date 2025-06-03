@@ -7,11 +7,14 @@ from bot.config import BOT_TOKEN
 from bot.handlers import base, food_analyze
 from bot.arq.redis_pool import init_redis_pool
 from db.init import init_db
+from bot.middlewares.user import UserRegistrationMiddleware
 import db.signals # noqa: F401 # импорт сигналов для регистрации обработчиков
 
 
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher()
+
+dp.message.middleware(UserRegistrationMiddleware())
 
 dp.include_router(base.router)
 dp.include_router(food_analyze.router)

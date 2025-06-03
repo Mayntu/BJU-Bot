@@ -323,7 +323,7 @@ async def get_daily_stats(user_id : int) -> str:
     """
     logger.info(f"Получаем статистику по блюдам пользователя {user_id} за сегодня...")
 
-    user = await User.get(telegram_id=user_id)
+    user = await User.get(id=user_id)
     user_tz = pytz.timezone(user.timezone)
     logger.info(f"Таймзона пользователя: {user.timezone}")
 
@@ -443,7 +443,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
     logger.info(f"Сохраняем блюдо {meal_analysis.title} в БД для пользователя {user_id}...")
     
     meal : Meal = Meal(
-        user=await User.get(telegram_id=user_id),
+        user=await User.get(id=user_id),
         name=meal_analysis.title,
         total_weight=meal_analysis.total_weight,
         total_calories=meal_analysis.calories,
