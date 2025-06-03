@@ -257,6 +257,27 @@ async def analyze_edit_food_voice(meal_id : str, file_url : str) -> MealAnalysis
     return await analyze_edit_food_text(meal_id=meal_id, description=transcribed_text)
 
 
+async def delete_food(meal_id : str) -> str:
+    """
+    Удаляет блюдо из БД по ID.
+    
+    :param meal_id: ID блюда, которое нужно удалить
+    :return: Строка с подтверждением удаления
+    """
+    logger.info(f"Удаляем блюдо с ID {meal_id} из БД...")
+    
+    meal : Meal = await Meal.get(id=meal_id)
+
+    # Удаляем ингредиенты, связанные с этим блюдом
+    await Ingredient.filter(meal=meal).delete()
+
+    await meal.delete()
+
+    logger.info(f"Блюдо с ID {meal_id} успешно удалено.")
+    
+    return f"✅ Блюдо '{meal.name}' успешно удалено из базы данных."
+
+
 async def get_daily_stats(user_id : int) -> str:
     """
     Получает статистику по блюдам пользователя за сегодня.

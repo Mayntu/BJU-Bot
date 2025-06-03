@@ -9,6 +9,7 @@ from bot.services.food_analyze import (
     analyze_food_voice,
     analyze_edit_food_text,
     analyze_edit_food_voice,
+    delete_food,
     get_daily_stats
 )
 from bot.services.logger import logger
@@ -29,6 +30,8 @@ router : Router = Router()
 async def handle_edit_text(message : Message, state : FSMContext):
     state_data : dict = await state.get_data()
     meal_id : str = state_data.get("meal_id")
+    prev_report_message_id = state_data.get("prev_report_message_id")
+    wait_for_edit_message_id : int = state_data.get("wait_for_edit_message_id")
     
     new_meal_description : str = message.text
     
@@ -38,6 +41,13 @@ async def handle_edit_text(message : Message, state : FSMContext):
     meal_id : str = result.meal_id
     
     await message.answer(text=text, parse_mode="HTML", reply_markup=get_meal_action_keyboard(meal_id=meal_id))
+
+    try:
+        # await message.bot.delete_message(chat_id=message.chat.id, message_id=prev_report_message_id)
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=wait_for_edit_message_id)
+        # await message.delete()
+    except Exception as e:
+        logger.error(f"Ошибка при удалении сообщения: {e}")
     
     await state.clear()
 
@@ -47,6 +57,9 @@ async def handle_edit_text(message : Message, state : FSMContext):
 async def handle_edit_voice(message : Message, state : FSMContext):
     state_data : dict = await state.get_data()
     meal_id : str = state_data.get("meal_id")
+
+    prev_report_message_id = state_data.get("prev_report_message_id")
+    wait_for_edit_message_id : int = state_data.get("wait_for_edit_message_id")
 
     voice = message.voice
     voice_file = await message.bot.get_file(voice.file_id)
@@ -60,6 +73,13 @@ async def handle_edit_voice(message : Message, state : FSMContext):
     meal_id : str = result.meal_id
     
     await message.answer(text=text, parse_mode="HTML", reply_markup=get_meal_action_keyboard(meal_id=meal_id))
+
+    try:
+        # await message.bot.delete_message(chat_id=message.chat.id, message_id=prev_report_message_id)
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=wait_for_edit_message_id)
+        # await message.delete()
+    except Exception as e:
+        logger.error(f"Ошибка при удалении сообщения: {e}")
     
     await state.clear()
 
@@ -72,11 +92,22 @@ async def handle_edit_voice(message : Message, state : FSMContext):
 async def meal_edit_callback(callback_query : CallbackQuery, state : FSMContext):
     meal_id : str = callback_query.data.split(":")[1]
     await state.set_state(FoodAnalyzeState.editing)
-    await state.update_data(meal_id=meal_id)
-    await callback_query.message.answer(
+    await state.update_data(meal_id=meal_id, prev_report_message_id=callback_query.message.message_id)
+    wait_for_edit_message = await callback_query.message.answer(
         text="✏️ Введите исправления для блюда (текстовое/голосовое сообщение):"
     )
+    await state.update_data(wait_for_edit_message_id=wait_for_edit_message.message_id)
+    await callback_query.message.delete_reply_markup()
     await callback_query.answer()
+
+
+@router.callback_query(F.data.startswith("delete:"))
+async def meal_delete_callback(callback_query : CallbackQuery, state : FSMContext):
+    meal_id : str = callback_query.data.split(":")[1]
+    await callback_query.message.delete_reply_markup()
+    await delete_food(meal_id=meal_id)
+    await callback_query.answer()
+    await state.clear()
 
 
 
