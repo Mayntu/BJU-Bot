@@ -20,6 +20,7 @@ class MealAnalysis(BaseModel):
     """
     Модель для анализа блюда.
     """
+    is_food : bool = Field(..., description="Является ли это блюдо едой")
     title: str = Field(..., description="Название блюда")
     total_weight: float = Field(..., description="Общий вес блюда")
     calories: float = Field(..., description="Общая калорийность")
@@ -37,3 +38,4 @@ class MealAnalysisResult:
     """
     report : str
     meal_id : str
+    is_food : bool

@@ -59,6 +59,15 @@ async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResul
     # Получаем анализ блюда с помощью OpenAI API
     meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_IMAGE_TOKENS)
 
+    if not meal_analysis.is_food:
+        # если блюдо не еда, возвращаем результат с нулевыми значениями
+        logger.info("Получено описание, которое не относится к еде. Возвращаем нулевые значения.")
+        return MealAnalysisResult(
+            report="❗ Описание не относится к еде, пожалуйста, проверьте введённые данные",
+            meal_id=None,
+            is_food=meal_analysis.is_food
+        )
+
     # Сохраняем анализ блюда в БД и формируем отчет
     result : MealAnalysisResult = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
     return result
@@ -93,6 +102,15 @@ async def analyze_food_text(text : str, user_id : int) -> MealAnalysisResult:
 
     # Получаем анализ блюда с помощью OpenAI API
     meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
+
+    if not meal_analysis.is_food:
+        # если блюдо не еда, возвращаем результат с нулевыми значениями
+        logger.info("Получено описание, которое не относится к еде. Возвращаем нулевые значения.")
+        return MealAnalysisResult(
+            report="❗ Описание не относится к еде, пожалуйста, проверьте введённые данные",
+            meal_id=None,
+            is_food=meal_analysis.is_food
+        )
     
     # Сохраняем анализ блюда в БД и формируем отчет
     result : MealAnalysisResult = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
@@ -137,6 +155,15 @@ async def analyze_food_voice(file_url : str, user_id : int) -> MealAnalysisResul
 
     # Получаем анализ блюда с помощью OpenAI API
     meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS, growth_tokens=300)
+
+    if not meal_analysis.is_food:
+        # если блюдо не еда, возвращаем результат с нулевыми значениями
+        logger.info("Получено описание, которое не относится к еде. Возвращаем нулевые значения.")
+        return MealAnalysisResult(
+            report="❗ Описание не относится к еде, пожалуйста, проверьте введённые данные",
+            meal_id=None,
+            is_food=meal_analysis.is_food
+        )
     
     # Сохраняем анализ блюда в БД и формируем отчет
     result : MealAnalysisResult = await save_meal_to_db_and_get_report(meal_analysis=meal_analysis, user_id=user_id)
@@ -192,6 +219,15 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
     # Получаем новый анализ блюда через openai
     new_meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
 
+    if not new_meal_analysis.is_food:
+        # если блюдо не еда, возвращаем результат с нулевыми значениями
+        logger.info("Получено описание, которое не относится к еде. Возвращаем нулевые значения.")
+        return MealAnalysisResult(
+            report=prev_description,
+            meal_id=meal_id,
+            is_food=new_meal_analysis.is_food
+        )
+
     # Удаляем старые ингредиенты из бд
     await Ingredient.filter(meal=original_meal).delete()
 
@@ -231,7 +267,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
         )
         new_report += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
 
-    return MealAnalysisResult(report=new_report, meal_id=meal_id)
+    return MealAnalysisResult(report=new_report, meal_id=meal_id, is_food=new_meal_analysis.is_food)
 
 
 async def analyze_edit_food_voice(meal_id : str, file_url : str) -> MealAnalysisResult:
@@ -448,4 +484,4 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
     
     logger.info(f"Для пользователя {user_id} было проанализировано блюдо: {meal.name} и сохранено в БД.")
     logger.info("="*50)
-    return MealAnalysisResult(report=result, meal_id=meal.id)
+    return MealAnalysisResult(report=result, meal_id=meal.id, is_food=meal_analysis.is_food)

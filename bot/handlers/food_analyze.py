@@ -36,11 +36,17 @@ async def handle_edit_text(message : Message, state : FSMContext):
     new_meal_description : str = message.text
     
     result : MealAnalysisResult = await analyze_edit_food_text(meal_id=meal_id, description=new_meal_description)
+
+    if not result.is_food:
+        await message.answer(text="❗ Описание не относится к еде, пожалуйста, проверьте введённые данные", parse_mode="HTML")
     
     text : str = result.report
     meal_id : str = result.meal_id
+    reply_markup = None
+    if meal_id:
+        reply_markup = get_meal_action_keyboard(meal_id=meal_id)
     
-    await message.answer(text=text, parse_mode="HTML", reply_markup=get_meal_action_keyboard(meal_id=meal_id))
+    await message.answer(text=text, parse_mode="HTML", reply_markup=reply_markup)
 
     try:
         # await message.bot.delete_message(chat_id=message.chat.id, message_id=prev_report_message_id)
@@ -69,10 +75,16 @@ async def handle_edit_voice(message : Message, state : FSMContext):
     
     result : MealAnalysisResult = await analyze_edit_food_voice(meal_id=meal_id, file_url=voice_file_url)
     
+    if not result.is_food:
+        await message.answer(text="❗ Описание не относится к еде, пожалуйста, проверьте введённые данные", parse_mode="HTML")
+    
     text : str = result.report
     meal_id : str = result.meal_id
+    reply_markup = None
+    if meal_id:
+        reply_markup = get_meal_action_keyboard(meal_id=meal_id)
     
-    await message.answer(text=text, parse_mode="HTML", reply_markup=get_meal_action_keyboard(meal_id=meal_id))
+    await message.answer(text=text, parse_mode="HTML", reply_markup=reply_markup)
 
     try:
         # await message.bot.delete_message(chat_id=message.chat.id, message_id=prev_report_message_id)
@@ -141,8 +153,11 @@ async def handle_photo(message : Message):
     
     text : str = result.report
     meal_id : str = result.meal_id
-
-    await message.answer(text=text, parse_mode="HTML", reply_markup=get_meal_action_keyboard(meal_id=meal_id))
+    reply_markup = None
+    if meal_id:
+        reply_markup = get_meal_action_keyboard(meal_id=meal_id)
+    
+    await message.answer(text=text, parse_mode="HTML", reply_markup=reply_markup)
 
 
 # Обработка текстовых сообщений
@@ -163,8 +178,11 @@ async def handle_text(message : Message):
     
     text : str = result.report
     meal_id : str = result.meal_id
+    reply_markup = None
+    if meal_id:
+        reply_markup = get_meal_action_keyboard(meal_id=meal_id)
     
-    await message.answer(text=text, parse_mode="HTML", reply_markup=get_meal_action_keyboard(meal_id=meal_id))
+    await message.answer(text=text, parse_mode="HTML", reply_markup=reply_markup)
 
 
 # Обработка голосовых сообщений
@@ -191,5 +209,8 @@ async def handle_voice(message : Message):
     
     text : str = result.report
     meal_id : str = result.meal_id
+    reply_markup = None
+    if meal_id:
+        reply_markup = get_meal_action_keyboard(meal_id=meal_id)
     
-    await message.answer(text=text, parse_mode="HTML", reply_markup=get_meal_action_keyboard(meal_id=meal_id))
+    await message.answer(text=text, parse_mode="HTML", reply_markup=reply_markup)
