@@ -18,6 +18,9 @@ async def update_daily_report(ctx, user_id: str):
 
     # Получаем пользователя и его таймзону
     user = await User.get(id=user_id)
+    user.meal_count += 1
+    await user.save()
+
     user_tz = pytz.timezone(user.timezone)
 
     # Текущий момент в локальном времени пользователя
@@ -79,5 +82,5 @@ async def update_daily_report(ctx, user_id: str):
                 calories=meal.total_calories,
                 order=i
             )
-
+    
     logger.info(f"Обновлён дневной отчёт и список приёмов пищи для пользователя: {user_id} — {today_start.date()}")

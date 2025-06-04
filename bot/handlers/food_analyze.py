@@ -20,7 +20,7 @@ from bot.middlewares.payments import SubscriptionMiddleware
 
 
 router : Router = Router()
-# router.message.middleware(SubscriptionMiddleware())
+router.message.middleware(SubscriptionMiddleware())
 
 
 # ------------------- FSM States ------------------- #

@@ -16,15 +16,23 @@ def get_main_menu() -> ReplyKeyboardMarkup:
 
 def get_subscriptions_menu() -> InlineKeyboardMarkup:
     inline_keyboard : list[list[InlineKeyboardButton]] = []
+
+    inline_keyboard.append([
+        InlineKeyboardButton(
+            text="📄 Ознакомиться с офертой",
+            callback_data="show_offer"
+        )
+    ])
+
     for subscription in Store:
         price : float = subscription.price
         title : str = subscription.title
-        duration = subscription.duration_month
-        button_text = f"Тарифный план [{subscription.title}] – {price} руб."
+        duration : int = subscription.duration_month
+        button_text : str = f"{duration} мес: – {price} руб."
         inline_keyboard.append([
             InlineKeyboardButton(
                 text=button_text,
-                callback_data=f"sub_title:{title}"
+                callback_data=f"sub_duration:{duration}"
             )
         ])
 

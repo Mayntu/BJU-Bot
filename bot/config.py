@@ -17,6 +17,10 @@ load_dotenv()
 
 # settings : Settings = Settings()
 
+# TODO: Использовать pydantic для валидации настроек
+
+
+# ------------------- Переменные окружения ------------------- #
 
 BOT_TOKEN : str = os.getenv("BOT_TOKEN")
 OPENAI_KEY : str = os.getenv("OPENAI_KEY")
@@ -25,19 +29,25 @@ DB_URL : str = os.getenv("DATABASE_URL")
 REDIS_HOST : str = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT : int = int(os.getenv("REDIS_PORT", 6379))
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-MAX_IMAGE_TOKENS : str = int(os.getenv("MAX_IMAGE_TOKENS", 1000))
-MAX_DESCRIPTION_TOKENS : int = int(os.getenv("MAX_DESCRIPTION_TOKENS", 300))
 YOOKASSA_SHOP_ID : str = os.getenv("YOOKAASSA_SHOP_ID")
 YOOKASSA_SECRET_KEY : str = os.getenv("YOOKASSA_SECRET_KEY")
 
+MAX_IMAGE_TOKENS : str = int(os.getenv("MAX_IMAGE_TOKENS", 1000))
+MAX_DESCRIPTION_TOKENS : int = int(os.getenv("MAX_DESCRIPTION_TOKENS", 300))
+FREE_MEAL_COUNT : int = int(os.getenv("FREE_MEAL_COUNT", 5))
+OFERTA_FILE_ID : str = os.getenv("OFERTA_FILE_ID")
+
+
+# ------------------- Варианты подписок ------------------- #
 
 class SubscriptionsStore(Enum):
     """
     Enum для хранения тарифов подписок.
     Каждый тариф содержит название, цену и длительность в месяцах.
     """
-    BASIC = ("basic", 1500, 1)
-    PRO = ("pro", 3500, 1)
+    BASIC_ONE_MONTH = ("basic", 270, 1)
+    BASIC_THREE_MONTH = ("basic", 770, 3)
+    BASIC_SIX_MONTH = ("basic", 1490, 6)
 
     @staticmethod
     def get_by_title(title: str) -> "SubscriptionsStore":
@@ -49,6 +59,20 @@ class SubscriptionsStore(Enum):
         """
         for subscription in SubscriptionsStore:
             if subscription.title == title:
+                return subscription
+        
+        return None
+    
+    @staticmethod
+    def get_by_duration(duration : int) -> "SubscriptionsStore":
+        """
+        Получает объект подписки по длительности.
+        
+        :param duration: Длительность подписки (int)
+        :return: Объект SubscriptionsStore или None, если не найдено
+        """
+        for subscription in SubscriptionsStore:
+            if str(subscription.duration_month) == str(duration):
                 return subscription
         
         return None
@@ -67,6 +91,27 @@ class SubscriptionsStore(Enum):
     #     return None
 
 
+class YOOKASSA_PAYMENT_STATUS(Enum):
+    """
+    Enum для хранения статусов платежей в ЮKassa.
+    """
+    PENDING = "pending"
+    SUCCEEDED = "succeeded"
+    CANCELED = "canceled"
+
+    @staticmethod
+    def is_successful(status: str) -> bool:
+        """
+        Проверяет, является ли статус успешным.
+        
+        :param status: Статус платежа
+        :return: True, если статус успешный, иначе False
+        """
+        return status in [YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value]
+
+
+# ------------------- Конфиг Tortoise ORM ------------------- #
+
 TORTOISE_ORM = {
     "connections": {
         "default": DB_URL
@@ -80,6 +125,9 @@ TORTOISE_ORM = {
     "use_tz": True,
     "timezone": "UTC",
 }
+
+
+# ------------------- Сообщения бота ------------------- #
 
 BOT_MEAL_REPORT : str = """{meal_name}  
 Вес блюда: {meal_weight} гр.  
@@ -103,7 +151,7 @@ BOT_DAILY_MEAL_REPORT : str = """📊 Статистика за сегодня:
 🍽 Приемы пищи:
 """
 
-BUY_TEXT : str = """🛒 Вы выбрали подписку {title}.
+BUY_TEXT : str = """🛒 Вы выбрали подписку на {duration} мес.
 💳 Нажмите "Оплатить", а после успешного платежа — "Проверить".
 ⚠️ Прежде чем оплачивать, ознакомьтесь с пользовательским соглашением.
 """
@@ -140,3 +188,13 @@ HELP_TEXT : str = """
 Нужна помощь?
 По техническим вопросам: @...
 """
+
+SUBSCRIBE_TEXT : str = """
+Оформите подписку, чтобы продолжить пользоваться сервисом. 
+
+💳 Выберите срок подписки:
+"""
+
+FREE_MEAL_END_MESSAGE : str = "К сожалению, бесплатные запросы закончились! Оформите подписку /subscribe"
+
+SUBSCRIPTION_NOT_ACTIVE_MESSAGE : str = "❌ Подписка не активна. Пожалуйста, оплатите подписку. /subscribe"

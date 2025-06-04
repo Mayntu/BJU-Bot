@@ -13,10 +13,14 @@ from tortoise.fields import (
 from tortoise.models import Model
 from uuid import uuid4
 
+from bot.config import YOOKASSA_PAYMENT_STATUS
+
+
 class User(Model):
     id = BigIntField(pk=True)
     username = CharField(max_length=255, unique=True)
     timezone = CharField(max_length=64, default="UTC")
+    meal_count = IntField(default=0)
     # subscription = CharField(max_length=32, default="free")
 
     created_at = DatetimeField(auto_now_add=True)
@@ -109,7 +113,7 @@ class UserDailyMeal(Model):
 class UserSubscription(Model):
     id = UUIDField(pk=True, default=uuid4)
     user = ForeignKeyField("models.User", related_name="subscriptions")
-    plan = CharField(max_length=32) # free, basic, pro
+    plan = CharField(max_length=32)
     price = DecimalField(max_digits=10, decimal_places=2)
     currency = CharField(max_length=32, default="RUB")
     start_date = DateField()
@@ -126,7 +130,7 @@ class Payment(Model):
     id = UUIDField(pk=True, default=uuid4)
     user = ForeignKeyField("models.User", related_name="payments")
     user_subscription = ForeignKeyField("models.UserSubscription", related_name="payments")
-    status = CharField(max_length=32, default="pending")  # pending, completed, failed
+    status = CharField(max_length=32, default=YOOKASSA_PAYMENT_STATUS.PENDING.value)  # pending, succeeded, canceled
     yookassa_payment_id = CharField(max_length=64, null=True, unique=True)
 
     created_at = DatetimeField(auto_now_add=True)

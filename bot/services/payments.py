@@ -6,7 +6,7 @@ from dateutil.relativedelta import relativedelta
 from pytz import UTC as pytz_UTC
 from uuid import uuid4
 
-from bot.config import YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, SubscriptionsStore
+from bot.config import YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, SubscriptionsStore, YOOKASSA_PAYMENT_STATUS
 from db.models import User, UserSubscription, Payment
 from bot.schemas.payments import CreatePaymentTicketResponse
 from bot.services.logger import logger
@@ -16,18 +16,18 @@ Configuration.account_id = YOOKASSA_SHOP_ID
 Configuration.secret_key = YOOKASSA_SECRET_KEY
 
 
-async def create_payment_ticket(user_id : int, subscription_title : str) -> CreatePaymentTicketResponse:
+async def create_payment_ticket(user_id : int, subscription_duration : int) -> CreatePaymentTicketResponse:
     """
     Создает платежный тикет и возвращает URL для оплаты.
     
     :param user_id: ID пользователя
-    :param subscription_title: Название подписки
+    :param subscription_duration: Название подписки
     :raises ValueError: Если подписка с указанным названием не найдена
     :return: Объект ответа API с информацией о платеже
     """
-    subscription : SubscriptionsStore = SubscriptionsStore.get_by_title(title=subscription_title)
+    subscription : SubscriptionsStore = SubscriptionsStore.get_by_duration(duration=subscription_duration)
     if not subscription:
-        raise ValueError(f"Подписка с названием '{subscription_title}' не найдена.")
+        raise ValueError(f"Подписка с продолжительностью '{subscription_duration}' не найдена.")
     
     # Создаем запись о платеже в базе данных
     logger.info(f"Создание платежного тикета для пользователя {user_id} с подпиской {subscription.title}")
@@ -114,8 +114,8 @@ async def check_payment_status(payment_id : str) -> bool:
     yookassa_response : APIPaymentResponse = YooPayment.find_one(payment.yookassa_payment_id)
 
     # Проверяем статус платежа
-    if yookassa_response.status == "succeeded":
-        payment.status = "pending"
+    if yookassa_response.status == YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value:
+        payment.status = YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value
         await payment.save()
         logger.info(f"Платеж {payment_id} успешно завершен.")
         return True
