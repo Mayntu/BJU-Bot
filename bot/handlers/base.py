@@ -86,7 +86,7 @@ async def cmd_start(message: Message):
     )
 
 
-# Обработка команды /stats
+# Обработка команды /help
 @router.message(Command("help"))
 async def cmd_help(message: Message):
     await message.answer(

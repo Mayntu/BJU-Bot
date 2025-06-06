@@ -12,10 +12,13 @@ from bot.services.food_analyze import (
     delete_food,
     get_daily_stats
 )
+from bot.services.user import set_calories_goal
 from bot.services.logger import logger
 from bot.keyboards.food_analyze import get_meal_action_keyboard
 from bot.schemas.food_analyze import MealAnalysisResult
 from bot.states.food_analyze import FoodAnalyzeState
+from bot.states.user import GoalState
+from bot.config import SET_GOAL_TEXT
 from bot.middlewares.payments import SubscriptionMiddleware
 
 
@@ -96,6 +99,19 @@ async def handle_edit_voice(message : Message, state : FSMContext):
     await state.clear()
 
 
+@router.message(GoalState.waiting_for_goal)
+async def process_goal_input(message: Message, state: FSMContext):
+    goal : str = message.text.strip()
+    try:
+        await set_calories_goal(user_id=message.from_user.id, goal=goal)
+    except ValueError as e:
+        await message.answer(str(e))
+        return
+    
+    await message.answer(f"Ваша цель сохранена: {goal} ккал в день ✅")
+    await state.clear()
+
+
 
 # ------------------- Callbacks ------------------- #
 
@@ -127,9 +143,16 @@ async def meal_delete_callback(callback_query : CallbackQuery, state : FSMContex
 
 @router.message(Command("stats"))
 async def cmd_stats(message: Message):
-    # TODO: получить статистику из бд
     result : str = await get_daily_stats(user_id=message.from_user.id)
     await message.answer(text=result, parse_mode="HTML")
+
+
+@router.message(Command("set_goal"))
+async def cmd_calories_goal(message: Message, state: FSMContext):
+    await message.answer(
+        text=SET_GOAL_TEXT,
+    )
+    await state.set_state(GoalState.waiting_for_goal)
 
 
 

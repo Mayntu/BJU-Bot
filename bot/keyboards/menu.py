@@ -7,6 +7,7 @@ def get_main_menu() -> ReplyKeyboardMarkup:
         [KeyboardButton(text="/stats")],
         [KeyboardButton(text="/help")],
         [KeyboardButton(text="/subscribe")],
+        [KeyboardButton(text="/set_goal")],
     ]
     return ReplyKeyboardMarkup(
         keyboard=buttons,

@@ -370,6 +370,12 @@ async def get_daily_stats(user_id : int) -> str:
         carbs_pct=carbs_pct
     )
     result += meals_text
+
+    # Высчитываем насколько пользователь выполнил свою цель
+    calorie_goal : float = user.calorie_goal
+    diff : float = calorie_goal - total_calories
+    status : str = "Недобор" if diff > 0 else "Перебор"
+    result += f"\n\nВаша цель: {calorie_goal} ккал\nВсего: {total_calories} ккал\n{status}: {abs(diff)} ккал"
     
     logger.info(f"Статистика для пользователя {user_id} получена.")
     logger.info("="*50)

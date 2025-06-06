@@ -21,6 +21,7 @@ class User(Model):
     username = CharField(max_length=255, unique=True)
     timezone = CharField(max_length=64, default="UTC")
     meal_count = IntField(default=0)
+    calorie_goal = FloatField(default=2000.0)
     # subscription = CharField(max_length=32, default="free")
 
     created_at = DatetimeField(auto_now_add=True)
