@@ -194,7 +194,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
     )
 
     for ingredient in original_meal.ingredients:
-        prev_description += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
+        prev_description += f"\n{ingredient.name} - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
     
     # Контекст для запроса к openai
     messages : list[dict] = [
@@ -265,7 +265,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
             carbs=ingredient.carbs,
             fiber=ingredient.fiber
         )
-        new_report += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
+        new_report += f"\n{ingredient.name} - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
 
     return MealAnalysisResult(report=new_report, meal_id=meal_id, is_food=new_meal_analysis.is_food)
 
@@ -480,7 +480,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
             fiber=ingredient.fiber,
         )
         await ingredient_model.save()
-        result += f"\n[{ingredient.name}] - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
+        result += f"\n{ingredient.name} - {ingredient.weight} гр. | {ingredient.calories} ккал | Белки {ingredient.protein} гр. | Жиры {ingredient.fat} гр. | Углеводы {ingredient.carbs} гр. | Клетчатка {ingredient.fiber} гр;\n"
     
     logger.info(f"Для пользователя {user_id} было проанализировано блюдо: {meal.name} и сохранено в БД.")
     logger.info("="*50)
