@@ -1,6 +1,14 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram import Bot
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    BotCommand,
+)
 
 from bot.config import SubscriptionsStore as Store
+
 
 def get_main_menu() -> ReplyKeyboardMarkup:
     buttons = [
@@ -14,6 +22,7 @@ def get_main_menu() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         input_field_placeholder="Отправь фото еды, текст или аудио..."
     )
+
 
 def get_subscriptions_menu() -> InlineKeyboardMarkup:
     inline_keyboard : list[list[InlineKeyboardButton]] = []
@@ -42,6 +51,7 @@ def get_subscriptions_menu() -> InlineKeyboardMarkup:
         inline_keyboard=inline_keyboard
     )
 
+
 def get_subscription_confirmation_menu(url : str, payment_id : str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -51,3 +61,16 @@ def get_subscription_confirmation_menu(url : str, payment_id : str) -> InlineKey
     ])
 
     return keyboard
+
+
+
+async def set_bot_commands(bot: Bot):
+    commands = [
+        BotCommand(command="start", description="Начать"),
+        BotCommand(command="subscribe", description="Тарифы"),
+        BotCommand(command="help", description="Помощь"),
+
+        BotCommand(command="stats", description="Статистика"),
+        BotCommand(command="set_goal", description="Цель по калориям"),
+    ]
+    await bot.set_my_commands(commands)

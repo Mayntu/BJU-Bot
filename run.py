@@ -5,6 +5,7 @@ from aiogram.client.default import DefaultBotProperties
 
 from bot.config import BOT_TOKEN
 from bot.handlers import base, food_analyze
+from bot.keyboards.menu import set_bot_commands
 from bot.arq.redis_pool import init_redis_pool
 from db.init import init_db
 from bot.middlewares.user import UserRegistrationMiddleware
@@ -25,6 +26,9 @@ async def on_startup():
 
 async def main():
     await on_startup()
+
+    await set_bot_commands(bot)
+    
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
