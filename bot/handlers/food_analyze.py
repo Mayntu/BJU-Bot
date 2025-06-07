@@ -2,6 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
+from datetime import date
 
 from bot.services.food_analyze import (
     analyze_food_image,
@@ -10,11 +11,12 @@ from bot.services.food_analyze import (
     analyze_edit_food_text,
     analyze_edit_food_voice,
     delete_food,
-    get_daily_stats
+    get_daily_stats,
+    get_available_report_dates,
 )
-from bot.services.user import set_calories_goal
+from bot.services.user import set_calories_goal, get_user_local_date
 from bot.services.logger import logger
-from bot.keyboards.food_analyze import get_meal_action_keyboard
+from bot.keyboards.food_analyze import get_meal_action_keyboard, build_stats_navigation_kb
 from bot.schemas.food_analyze import MealAnalysisResult
 from bot.states.food_analyze import FoodAnalyzeState
 from bot.states.user import GoalState
@@ -138,13 +140,41 @@ async def meal_delete_callback(callback_query : CallbackQuery, state : FSMContex
     await state.clear()
 
 
+@router.callback_query(F.data.startswith("stats:"))
+async def callback_stats_navigation(callback_query: CallbackQuery, state: FSMContext):
+    user_id : int = callback_query.from_user.id
+    target_date = date.fromisoformat(callback_query.data.split(":")[1])
+    
+    min_date, max_date = await get_available_report_dates(user_id=user_id)
+    today = await get_user_local_date(user_id=user_id)
+
+    logger.info(f"min_date : {min_date} | max_date : {max_date}")
+    logger.info(f"target_date : {target_date}")
+
+    if target_date < min_date or target_date > today:
+        await callback_query.answer("Нет данных за эту дату", show_alert=True)
+        return
+
+    result : str = await get_daily_stats(user_id=user_id, date=target_date)
+    kb = build_stats_navigation_kb(target_date, min_date, today)
+
+    await callback_query.message.edit_text(result, reply_markup=kb, parse_mode="HTML")
+    await callback_query.answer()
+
+
 
 # ------------------- Commands ------------------- #
 
 @router.message(Command("stats"))
-async def cmd_stats(message: Message):
-    result : str = await get_daily_stats(user_id=message.from_user.id)
-    await message.answer(text=result, parse_mode="HTML")
+async def cmd_stats(message: Message, state: FSMContext):
+    user_id : int = message.from_user.id
+    date_for_stats = await get_user_local_date(user_id=user_id)
+
+    min_date, _ = await get_available_report_dates(user_id=user_id)
+    result : str = await get_daily_stats(user_id=user_id, date=date_for_stats)
+    kb = build_stats_navigation_kb(date_for_stats, min_date, date_for_stats)
+
+    await message.answer(result, reply_markup=kb, parse_mode="HTML")
 
 
 @router.message(Command("set_goal"))

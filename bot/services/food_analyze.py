@@ -1,6 +1,6 @@
 import pytz
 
-from datetime import datetime, time
+from datetime import datetime, date
 from openai import LengthFinishReasonError
 
 from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT, BOT_DAILY_MEAL_REPORT
@@ -314,21 +314,22 @@ async def delete_food(meal_id : str) -> str:
     return f"✅ Блюдо '{meal.name}' успешно удалено из базы данных."
 
 
-async def get_daily_stats(user_id : int) -> str:
+async def get_daily_stats(user_id : int, date : date) -> str:
     """
     Получает статистику по блюдам пользователя за сегодня.
     
     :param user_id: ID пользователя
+    :param date: date Дата пользователя (в часовом поясе пользователя)
     :return: Строка с отчетом о блюдах пользователя за сегодня
     """
     logger.info(f"Получаем статистику по блюдам пользователя {user_id} за сегодня...")
 
     user = await User.get(id=user_id)
-    user_tz = pytz.timezone(user.timezone)
+    # user_tz = pytz.timezone(user.timezone)
     logger.info(f"Таймзона пользователя: {user.timezone}")
 
     # Получаем текущую дату в таймзоне пользователя
-    local_date = datetime.now(user_tz).date()
+    local_date = date
 
     report = await UserDailyReport.get_or_none(
         user_id=user.id,
@@ -381,6 +382,24 @@ async def get_daily_stats(user_id : int) -> str:
     logger.info("="*50)
 
     return result
+
+
+async def get_available_report_dates(user_id: int) -> tuple[date, date]:
+    """
+    Функция для получения доступных дат отчётов от минимального к максимальному.
+    
+    :param user_id: ID пользователя
+    :return: tuple[date, date] Тапл где 0 это начальная, 1 - крайняя
+    """
+    
+    min_report = await UserDailyReport.filter(user_id=user_id).order_by("date").first()
+    max_report = await UserDailyReport.filter(user_id=user_id).order_by("-date").first()
+
+    if not min_report or not max_report:
+        today = date.today()
+        return today, today
+
+    return min_report.date, max_report.date
 
 
 

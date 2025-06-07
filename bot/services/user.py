@@ -1,3 +1,7 @@
+import pytz
+
+from datetime import datetime, date, timedelta
+
 from db.models import User
 from bot.services.logger import logger
 
@@ -34,3 +38,17 @@ async def set_calories_goal(user_id : int, goal : str) -> None:
     user : User = await User.get(id=user_id)
     user.calorie_goal = goal
     await user.save()
+
+
+async def get_user_local_date(user_id : int, shift_days : int = 0) -> date:
+    """
+    Возвращает текущую локальную дату пользователя, со сдвигом (для листания).
+
+    :param user_id: ID пользователя
+    :shift_days: Сдвиг дней
+    :return: Дату локального времени пользователя
+    """
+    user : User = await User.get(id=user_id)
+    tz = pytz.timezone(user.timezone)
+    now = datetime.now(tz)
+    return (now + timedelta(days=shift_days)).date()
