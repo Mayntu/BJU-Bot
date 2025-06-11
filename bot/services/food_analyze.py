@@ -2,9 +2,10 @@ from datetime import date
 from openai import LengthFinishReasonError
 from babel.dates import format_date
 
-from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT, BOT_DAILY_MEAL_REPORT, LOCALE
+from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT, BOT_DAILY_MEAL_REPORT, LOCALE, REDIS_KEYS
 from bot.services.logger import logger
 from bot.services.openai_client import client
+from bot.redis.client import redis_client
 from bot.services.images_handler import get_image_bytes, upload_to_imgbb
 from bot.services.voice_transcription import get_voice_path, transcribe_audio, close_voice_file
 from db.models import User, Meal, Ingredient, UserDailyReport, UserDailyMeal
@@ -323,6 +324,20 @@ async def get_daily_stats(user_id : int, date : date) -> str:
     """
     logger.info(f"Получаем статистику по блюдам пользователя {user_id} за сегодня...")
 
+    cache_key : str = REDIS_KEYS.STATS.value.format(
+        user_id=user_id,
+        date=date.isoformat()
+    )
+    
+    
+    # Попытка взять из кэша
+    cached_result = await redis_client.get(cache_key)
+    if cached_result:
+        logger.info(f"Кэш найден для {cache_key}")
+        return cached_result
+    
+    logger.info(f"Кэш не найден для {cache_key}, собираем заново...")
+
     user = await User.get(id=user_id)
     # user_tz = pytz.timezone(user.timezone)
     logger.info(f"Таймзона пользователя: {user.timezone}")
@@ -379,6 +394,10 @@ async def get_daily_stats(user_id : int, date : date) -> str:
         carbs_pct=carbs_pct
     )
     result += meals_text
+
+    await redis_client.set(cache_key, result, ex=300) # 5 минут
+
+    logger.info(f"Был установлен кеш : {cache_key}")
     
     
     logger.info(f"Статистика для пользователя {user_id} получена.")

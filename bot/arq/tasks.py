@@ -4,8 +4,10 @@ from datetime import datetime, timedelta
 from tortoise.transactions import in_transaction
 from tortoise.functions import Sum
 
+from bot.config import REDIS_KEYS
 from db.models import User, Meal, UserDailyReport, UserDailyMeal
 from bot.services.logger import logger
+from bot.redis.client import redis_client
 
 
 async def update_daily_report(ctx, user_id: str):
@@ -83,4 +85,11 @@ async def update_daily_report(ctx, user_id: str):
                 order=i
             )
     
+    redis_key : str = REDIS_KEYS.STATS.value.format(
+        user_id=user_id,
+        date=today_start.date().isoformat()
+    )
+    logger.info(f"Удаляем кеш по ключу : {redis_key}")
+    await redis_client.delete(redis_key)
+
     logger.info(f"Обновлён дневной отчёт и список приёмов пищи для пользователя: {user_id} — {today_start.date()}")

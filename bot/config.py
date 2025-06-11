@@ -115,6 +115,14 @@ class YOOKASSA_PAYMENT_STATUS(Enum):
         return status in [YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value]
 
 
+class REDIS_KEYS(Enum):
+    """
+    Enum для ключей redis кеша
+    """
+    REGISTERED_USER = "registered_user:{user_id}"
+    STATS = "stats_cache:{user_id}:{date}"
+
+
 # ------------------- Конфиг Tortoise ORM ------------------- #
 
 TORTOISE_ORM = {

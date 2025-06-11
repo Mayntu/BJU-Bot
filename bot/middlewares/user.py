@@ -2,6 +2,8 @@
 from aiogram import BaseMiddleware
 from aiogram.types import Message
 from typing import Callable, Awaitable, Dict, Any
+
+from bot.config import REDIS_KEYS
 from bot.redis.client import redis_client
 from bot.services.user import create_user_if_not_exists
 
@@ -13,7 +15,7 @@ class UserRegistrationMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         user_id = event.from_user.id
-        key = f"registered_user:{user_id}"
+        key : str = REDIS_KEYS.REGISTERED_USER.value.format(user_id=user_id)
 
         if not await redis_client.exists(key):
             await create_user_if_not_exists(
