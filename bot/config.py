@@ -23,14 +23,16 @@ load_dotenv()
 # ------------------- Переменные окружения ------------------- #
 
 BOT_TOKEN : str = os.getenv("BOT_TOKEN")
+BOT_TELEGRAM_URL : str = os.getenv("BOT_TELEGRAM_URL")
 OPENAI_KEY : str = os.getenv("OPENAI_KEY")
 IMGBB_API_KEY : str = os.getenv("IMGBB_API_KEY")
 DB_URL : str = os.getenv("DATABASE_URL")
 REDIS_HOST : str = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT : int = int(os.getenv("REDIS_PORT", 6379))
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
-YOOKASSA_SHOP_ID : str = os.getenv("YOOKAASSA_SHOP_ID")
+YOOKASSA_SHOP_ID : str = os.getenv("YOOKASSA_SHOP_ID")
 YOOKASSA_SECRET_KEY : str = os.getenv("YOOKASSA_SECRET_KEY")
+RECEIPT_EMAIL : str = os.getenv("RECEIPT_EMAIL")
 
 MAX_IMAGE_TOKENS : str = int(os.getenv("MAX_IMAGE_TOKENS", 1000))
 MAX_DESCRIPTION_TOKENS : int = int(os.getenv("MAX_DESCRIPTION_TOKENS", 300))
@@ -45,6 +47,7 @@ class SubscriptionsStore(Enum):
     Enum для хранения тарифов подписок.
     Каждый тариф содержит название, цену и длительность в месяцах.
     """
+    BASIC_ONE_DAY = ("basic", 1, 1)
     BASIC_ONE_MONTH = ("basic", 270, 1)
     BASIC_THREE_MONTH = ("basic", 770, 3)
     BASIC_SIX_MONTH = ("basic", 1490, 6)

@@ -1,15 +1,15 @@
 version: "3.9"
 
 services:
-  bot:
-    build: .
-    env_file: .env
-    depends_on:
-      - db
-      - redis
-    volumes:
-      - .:/app
-    restart: always
+  # bot:
+  #   build: .
+  #   env_file: .env
+  #   depends_on:
+  #     - db
+  #     - redis
+  #   volumes:
+  #     - .:/app
+  #   restart: always
 
   db:
     image: postgres:15
