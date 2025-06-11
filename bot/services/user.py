@@ -1,6 +1,6 @@
 import pytz
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 
 from db.models import User
 from bot.services.logger import logger
@@ -52,3 +52,21 @@ async def get_user_local_date(user_id : int, shift_days : int = 0) -> date:
     tz = pytz.timezone(user.timezone)
     now = datetime.now(tz)
     return (now + timedelta(days=shift_days)).date()
+
+
+async def update_user_timezone(user_id : int, tz_name : str) -> None:
+    user : User = await User.filter(id=user_id).first()
+    user.timezone = tz_name
+    user.timezone_setted = True
+    await user.save()
+
+
+
+def get_timezone_by_offset(offset_hours: int) -> str:
+    now = datetime.now(timezone.utc)
+    for tz_name in pytz.all_timezones:
+        tz = pytz.timezone(tz_name)
+        offset = now.astimezone(tz).utcoffset()
+        if offset == timedelta(hours=offset_hours):
+            return tz_name
+    return "UTC"

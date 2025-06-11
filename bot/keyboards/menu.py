@@ -62,6 +62,22 @@ def get_cancel_menu() -> InlineKeyboardMarkup:
     ])
 
 
+def get_timezone_offset_keyboard() -> InlineKeyboardMarkup:
+    buttons: list[list[InlineKeyboardButton]] = []
+    row: list[InlineKeyboardButton] = []
+
+    for i, offset in enumerate(range(-12, 15)):  # от UTC-12 до UTC+14
+        label = f"UTC{offset:+d}"
+        callback_data = f"choose_offset:{offset}"
+        row.append(InlineKeyboardButton(text=label, callback_data=callback_data))
+
+        if len(row) == 4 or offset == 14:  # каждые 4 кнопки
+            buttons.append(row)
+            row = []
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 
 async def set_bot_commands(bot: Bot):
     commands = [
@@ -70,5 +86,6 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="set_goal", description="Цель по калориям"),
         BotCommand(command="subscribe", description="Тарифы"),
         BotCommand(command="help", description="Помощь"),
+        BotCommand(command="set_timezone", description="Установить часовой пояс")
     ]
     await bot.set_my_commands(commands)

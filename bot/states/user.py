@@ -5,3 +5,7 @@ class GoalState(StatesGroup):
     Состояния для установки цели
     """
     waiting_for_goal : State = State()
+
+
+class TimezoneState(StatesGroup):
+    waiting_for_offset : State = State()

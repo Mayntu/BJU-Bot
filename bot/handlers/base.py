@@ -1,17 +1,20 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, FSInputFile
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 
 from bot.config import BUY_TEXT, HELLO_TEXT, HELP_TEXT, SUBSCRIBE_TEXT, OFERTA_FILE_ID
 from bot.schemas.payments import CreatePaymentTicketResponse
-from bot.services.user import create_user_if_not_exists
+from bot.services.user import create_user_if_not_exists, get_timezone_by_offset, update_user_timezone
 from bot.services.payments import create_payment_ticket, check_payment_status, cancel_pending_payment
 from bot.services.logger import logger
 from bot.keyboards.menu import (
     get_subscriptions_menu,
     get_subscription_confirmation_menu,
     get_keyboard_remove,
+    get_timezone_offset_keyboard
 )
+from bot.states.user import TimezoneState
 
 router : Router = Router()
 
@@ -88,12 +91,28 @@ async def handle_show_offer(callback_query: CallbackQuery):
     await callback_query.message.answer_document(OFERTA_FILE_ID, caption="📄 Ознакомьтесь с офертой")
 
 
+@router.callback_query(F.data.startswith("choose_offset:"), TimezoneState.waiting_for_offset)
+async def handle_timezone_choice(callback: CallbackQuery, state: FSMContext):
+    offset = int(callback.data.split(":")[1])
+    tz_name = get_timezone_by_offset(offset)
+
+    await update_user_timezone(user_id=callback.from_user.id, tz_name=tz_name)
+
+    await callback.message.edit_text(
+        f"✅ Ваш часовой пояс установлен: (UTC{offset:+d})",
+        parse_mode="Markdown"
+    )
+
+    await state.clear()
+
+
+
 # ------------------- Commands ------------------- #
 
 # Обработка команды /start
 @router.message(Command("start"))
-async def cmd_start(message: Message):
-    await create_user_if_not_exists(
+async def cmd_start(message: Message, state: FSMContext):
+    user = await create_user_if_not_exists(
         user_id=message.from_user.id,
         username=message.from_user.username or "Unknown"
     )
@@ -101,6 +120,15 @@ async def cmd_start(message: Message):
         text=HELLO_TEXT,
         reply_markup=get_keyboard_remove()
     )
+
+    if not user.timezone_setted:  # если ещё не установлен tz
+        await state.set_state(TimezoneState.waiting_for_offset)
+        await message.answer(
+            "👋 Добро пожаловать!\n\nПрежде чем начать, выберите ваш часовой пояс:",
+            reply_markup=get_timezone_offset_keyboard()
+        )
+        return
+
 
 
 # Обработка команды /help
@@ -117,4 +145,13 @@ async def cmd_subscribe(message: Message):
     await message.answer(
         SUBSCRIBE_TEXT,
         reply_markup=get_subscriptions_menu()
+    )
+
+
+@router.message(Command("set_timezone"))
+async def ask_timezone(message: Message, state: FSMContext):
+    await state.set_state(TimezoneState.waiting_for_offset)
+    await message.answer(
+        "Выберите ваш часовой пояс:",
+        reply_markup=get_timezone_offset_keyboard()
     )

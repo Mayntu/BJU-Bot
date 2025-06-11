@@ -7,6 +7,7 @@ from tortoise.fields import (
     DateField,
     UUIDField,
     IntField,
+    BooleanField,
 
     ForeignKeyField,
 )
@@ -22,6 +23,7 @@ class User(Model):
     timezone = CharField(max_length=64, default="UTC")
     meal_count = IntField(default=0)
     calorie_goal = FloatField(default=2000.0)
+    timezone_setted = BooleanField(default=False)
     # subscription = CharField(max_length=32, default="free")
 
     created_at = DatetimeField(auto_now_add=True)
