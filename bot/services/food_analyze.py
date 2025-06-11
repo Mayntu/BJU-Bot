@@ -1,9 +1,8 @@
-import pytz
-
-from datetime import datetime, date
+from datetime import date
 from openai import LengthFinishReasonError
+from babel.dates import format_date
 
-from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT, BOT_DAILY_MEAL_REPORT
+from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT, BOT_DAILY_MEAL_REPORT, LOCALE
 from bot.services.logger import logger
 from bot.services.openai_client import client
 from bot.services.images_handler import get_image_bytes, upload_to_imgbb
@@ -342,7 +341,7 @@ async def get_daily_stats(user_id : int, date : date) -> str:
     ).order_by("order")
 
     if not report:
-        return "📊 Статистика за сегодня пока недоступна."
+        return f"📊 Статистика за {format_date(date=date, format="d MMMM", locale=LOCALE)} недоступна. Не было приёмов пищи."
 
     total_calories = report.total_calories or 1
     protein_pct = round((report.total_protein * 4 / total_calories) * 100)
@@ -360,8 +359,17 @@ async def get_daily_stats(user_id : int, date : date) -> str:
             return formatted[:-2]
         return formatted
 
+    # Высчитываем насколько пользователь выполнил свою цель
+    calorie_goal : float = user.calorie_goal
+    diff : float = calorie_goal - total_calories
+    status : str = "Недобор" if diff > 0 else "Перебор"
+    
     result : str = BOT_DAILY_MEAL_REPORT.format(
+        date=format_date(date=date, format="d MMMM", locale=LOCALE),
         total_calories=format_float(report.total_calories, 0),
+        goal=calorie_goal,
+        status=status,
+        status_ccal=abs(diff),
         total_proteins=format_float(report.total_protein),
         total_fats=format_float(report.total_fat),
         total_carbs=format_float(report.total_carbs),
@@ -371,12 +379,7 @@ async def get_daily_stats(user_id : int, date : date) -> str:
         carbs_pct=carbs_pct
     )
     result += meals_text
-
-    # Высчитываем насколько пользователь выполнил свою цель
-    calorie_goal : float = user.calorie_goal
-    diff : float = calorie_goal - total_calories
-    status : str = "Недобор" if diff > 0 else "Перебор"
-    result += f"\n\nВаша цель: {calorie_goal} ккал\nВсего: {total_calories} ккал\n{status}: {abs(diff)} ккал"
+    
     
     logger.info(f"Статистика для пользователя {user_id} получена.")
     logger.info("="*50)

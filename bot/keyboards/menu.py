@@ -66,10 +66,9 @@ def get_cancel_menu() -> InlineKeyboardMarkup:
 async def set_bot_commands(bot: Bot):
     commands = [
         BotCommand(command="start", description="Начать"),
-        BotCommand(command="subscribe", description="Тарифы"),
-        BotCommand(command="help", description="Помощь"),
-
         BotCommand(command="stats", description="Статистика"),
         BotCommand(command="set_goal", description="Цель по калориям"),
+        BotCommand(command="subscribe", description="Тарифы"),
+        BotCommand(command="help", description="Помощь"),
     ]
     await bot.set_my_commands(commands)

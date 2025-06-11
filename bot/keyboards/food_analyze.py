@@ -1,10 +1,8 @@
-import pytz
-import locale
-
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import date, timedelta
 from babel.dates import format_date
 
+from bot.config import LOCALE
 
 
 def get_meal_action_keyboard(meal_id : str) -> InlineKeyboardMarkup:
@@ -18,7 +16,7 @@ def get_meal_action_keyboard(meal_id : str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="❌ Удалить", callback_data=f"delete:{meal_id}")],
     ])
 
-def build_stats_navigation_kb(current_date: date, min_date: date, max_date: date, locale_str: str = "ru_RU") -> InlineKeyboardMarkup:
+def build_stats_navigation_kb(current_date: date, min_date: date, max_date: date, locale_str: str = LOCALE) -> InlineKeyboardMarkup:
     """
     Создаёт кастомную клавиатуру для навигации по датам с учётом границ
     :param current_date: date текущая дата
