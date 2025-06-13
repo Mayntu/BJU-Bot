@@ -19,6 +19,10 @@ async def create_user_if_not_exists(user_id: int, username: str) -> User:
     return user[0]
 
 
+async def get_user(user_id : int) -> User:
+    return await User.get_or_none(id=user_id)
+
+
 async def set_calories_goal(user_id : int, goal : str) -> None:
     """
     Устанавливает цель по калориям для пользователя.

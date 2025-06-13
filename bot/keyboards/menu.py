@@ -6,7 +6,7 @@ from aiogram.types import (
     BotCommand,
 )
 
-from bot.config import SubscriptionsStore as Store
+from bot.config import SubscriptionsStore as Store, RUS_TIMEZONE
 
 
 def get_keyboard_remove() -> ReplyKeyboardRemove:
@@ -66,14 +66,17 @@ def get_timezone_offset_keyboard() -> InlineKeyboardMarkup:
     buttons: list[list[InlineKeyboardButton]] = []
     row: list[InlineKeyboardButton] = []
 
-    for i, offset in enumerate(range(-12, 15)):  # от UTC-12 до UTC+14
-        label = f"UTC{offset:+d}"
-        callback_data = f"choose_offset:{offset}"
+    for tz in RUS_TIMEZONE:
+        label = f"{tz.city} (UTC+{tz.offset})"
+        callback_data = f"choose_offset:{tz.offset}"
         row.append(InlineKeyboardButton(text=label, callback_data=callback_data))
 
-        if len(row) == 4 or offset == 14:  # каждые 4 кнопки
+        if len(row) == 2:  # 2 кнопки в строке, как в твоем примере
             buttons.append(row)
             row = []
+
+    if row:
+        buttons.append(row)
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

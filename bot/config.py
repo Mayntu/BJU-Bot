@@ -123,6 +123,28 @@ class REDIS_KEYS(Enum):
     STATS = "stats_cache:{user_id}:{date}"
 
 
+class RUS_TIMEZONE(Enum):
+    KALININGRAD = (2, "Калининград")
+    MOSCOW = (3, "Москва")
+    SAMARA = (4, "Самара")
+    YEKATERINBURG = (5, "Екатеринбург")
+    OMSK = (6, "Омск")
+    KRASNOYARSK = (7, "Красноярск")
+    IRKUTSK = (8, "Иркутск")
+    YAKUTSK = (9, "Якутск")
+    VLADIVOSTOK = (10, "Владивосток")
+    MAGADAN = (11, "Магадан")
+    KAMCHATKA = (12, "Камчатка")
+
+    @property
+    def offset(self) -> int:
+        return self.value[0]
+
+    @property
+    def city(self) -> str:
+        return self.value[1]
+
+
 # ------------------- Конфиг Tortoise ORM ------------------- #
 
 TORTOISE_ORM = {

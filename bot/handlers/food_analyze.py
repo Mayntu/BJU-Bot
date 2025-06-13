@@ -1,9 +1,10 @@
-from aiogram import Router, F
+from aiogram import Bot, Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from datetime import date
 
+from db.models import User
 from bot.services.food_analyze import (
     analyze_food_image,
     analyze_food_text,
@@ -14,12 +15,13 @@ from bot.services.food_analyze import (
     get_daily_stats,
     get_available_report_dates,
 )
-from bot.services.user import set_calories_goal, get_user_local_date
+from bot.services.user import set_calories_goal, get_user_local_date, get_user
 from bot.services.logger import logger
 from bot.keyboards.food_analyze import get_meal_action_keyboard, build_stats_navigation_kb
+from bot.keyboards.menu import get_timezone_offset_keyboard
 from bot.schemas.food_analyze import MealAnalysisResult
 from bot.states.food_analyze import FoodAnalyzeState
-from bot.states.user import GoalState
+from bot.states.user import GoalState, TimezoneState
 from bot.config import SET_GOAL_TEXT
 from bot.middlewares.payments import SubscriptionMiddleware
 
@@ -168,13 +170,25 @@ async def callback_stats_navigation(callback_query: CallbackQuery, state: FSMCon
 @router.message(Command("stats"))
 async def cmd_stats(message: Message, state: FSMContext):
     user_id : int = message.from_user.id
-    date_for_stats = await get_user_local_date(user_id=user_id)
+    user : User = await get_user(user_id=user_id)
+    if not user.timezone_setted:  # если ещё не установлен tz
+        await state.set_state(TimezoneState.waiting_for_offset)
+        await message.answer(
+            "👋 Добро пожаловать!\n\nПрежде чем начать, выберите ваш часовой пояс:",
+            reply_markup=get_timezone_offset_keyboard()
+        )
+        return
+    
+    await show_stats(user_id=user_id, chat_id=message.chat.id, bot=message.bot)
 
+
+async def show_stats(user_id: int, chat_id: int, bot: Bot):
+    date_for_stats = await get_user_local_date(user_id=user_id)
     min_date, _ = await get_available_report_dates(user_id=user_id)
-    result : str = await get_daily_stats(user_id=user_id, date=date_for_stats)
+    result = await get_daily_stats(user_id=user_id, date=date_for_stats)
     kb = build_stats_navigation_kb(date_for_stats, min_date, date_for_stats)
 
-    await message.answer(result, reply_markup=kb, parse_mode="HTML")
+    await bot.send_message(chat_id=chat_id, text=result, reply_markup=kb, parse_mode="HTML")
 
 
 @router.message(Command("set_goal"))

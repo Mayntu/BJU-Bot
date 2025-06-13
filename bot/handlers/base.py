@@ -15,6 +15,7 @@ from bot.keyboards.menu import (
     get_timezone_offset_keyboard
 )
 from bot.states.user import TimezoneState
+from bot.handlers.food_analyze import show_stats
 
 router : Router = Router()
 
@@ -104,6 +105,8 @@ async def handle_timezone_choice(callback: CallbackQuery, state: FSMContext):
     )
 
     await state.clear()
+    
+    await show_stats(user_id=callback.from_user.id, chat_id=callback.message.chat.id, bot=callback.bot)
 
 
 
@@ -112,7 +115,7 @@ async def handle_timezone_choice(callback: CallbackQuery, state: FSMContext):
 # Обработка команды /start
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
-    user = await create_user_if_not_exists(
+    await create_user_if_not_exists(
         user_id=message.from_user.id,
         username=message.from_user.username or "Unknown"
     )
@@ -120,14 +123,6 @@ async def cmd_start(message: Message, state: FSMContext):
         text=HELLO_TEXT,
         reply_markup=get_keyboard_remove()
     )
-
-    if not user.timezone_setted:  # если ещё не установлен tz
-        await state.set_state(TimezoneState.waiting_for_offset)
-        await message.answer(
-            "👋 Добро пожаловать!\n\nПрежде чем начать, выберите ваш часовой пояс:",
-            reply_markup=get_timezone_offset_keyboard()
-        )
-        return
 
 
 
