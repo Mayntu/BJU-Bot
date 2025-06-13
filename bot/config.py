@@ -49,7 +49,6 @@ class SubscriptionsStore(Enum):
     Enum для хранения тарифов подписок.
     Каждый тариф содержит название, цену и длительность в месяцах.
     """
-    BASIC_ONE_DAY = ("basic", 1, 1)
     BASIC_ONE_MONTH = ("basic", 270, 1)
     BASIC_THREE_MONTH = ("basic", 770, 3)
     BASIC_SIX_MONTH = ("basic", 1490, 6)
