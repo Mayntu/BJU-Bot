@@ -104,9 +104,11 @@ async def handle_timezone_choice(callback: CallbackQuery, state: FSMContext):
         parse_mode="Markdown"
     )
 
+    data = await state.get_data()
     await state.clear()
     
-    await show_stats(user_id=callback.from_user.id, chat_id=callback.message.chat.id, bot=callback.bot)
+    if data.get("show_stats_after_tz"):
+        await show_stats(user_id=callback.from_user.id, chat_id=callback.message.chat.id, bot=callback.bot)
 
 
 
@@ -146,6 +148,7 @@ async def cmd_subscribe(message: Message):
 @router.message(Command("set_timezone"))
 async def ask_timezone(message: Message, state: FSMContext):
     await state.set_state(TimezoneState.waiting_for_offset)
+    await state.update_data(show_stats_after_tz=False)
     await message.answer(
         "Выберите ваш часовой пояс:",
         reply_markup=get_timezone_offset_keyboard()

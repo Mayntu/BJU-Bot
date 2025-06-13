@@ -173,6 +173,7 @@ async def cmd_stats(message: Message, state: FSMContext):
     user : User = await get_user(user_id=user_id)
     if not user.timezone_setted:  # если ещё не установлен tz
         await state.set_state(TimezoneState.waiting_for_offset)
+        await state.update_data(show_stats_after_tz=True)
         await message.answer(
             "👋 Добро пожаловать!\n\nПрежде чем начать, выберите ваш часовой пояс:",
             reply_markup=get_timezone_offset_keyboard()
