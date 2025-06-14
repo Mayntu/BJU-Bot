@@ -1,15 +1,28 @@
 from datetime import date
+
 from openai import LengthFinishReasonError
 from babel.dates import format_date
 
-from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT, BOT_DAILY_MEAL_REPORT, LOCALE, REDIS_KEYS
+from db.models import User, Meal, Ingredient, UserDailyReport, UserDailyMeal
+
+from bot.config import (
+    MAX_IMAGE_TOKENS,
+    MAX_DESCRIPTION_TOKENS,
+    BOT_MEAL_REPORT,
+    BOT_DAILY_MEAL_REPORT,
+    LOCALE,
+    REPORT_CONFIG,
+    REDIS_KEYS
+)
+
 from bot.services.logger import logger
 from bot.services.openai_client import client
-from bot.redis.client import redis_client
+from bot.services.user import check_limit_reports
 from bot.services.images_handler import get_image_bytes
 from bot.services.voice_transcription import get_voice_path, transcribe_audio, close_voice_file
-from db.models import User, Meal, Ingredient, UserDailyReport, UserDailyMeal
+
 from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis, MealAnalysisResult
+
 from bot.prompts.food_analyze import (
     get_food_analysis_system_prompt,
     get_food_analysis_user_prompt,
@@ -18,7 +31,11 @@ from bot.prompts.food_analyze import (
     edit_food_analysis_by_description_system_prompt,
     edit_food_analysis_by_description_user_prompt,
 )
+
 from bot.s3.service import upload_image
+from bot.redis.client import redis_client
+from bot.exceptions.user import ReportLimitExceeded
+
 
 
 async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResult:
@@ -59,7 +76,7 @@ async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResul
     ]
     
     # Получаем анализ блюда с помощью OpenAI API
-    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_IMAGE_TOKENS)
+    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, user_id=user_id, max_tokens=MAX_IMAGE_TOKENS)
 
     if not meal_analysis.is_food:
         # если блюдо не еда, возвращаем результат с нулевыми значениями
@@ -103,7 +120,7 @@ async def analyze_food_text(text : str, user_id : int) -> MealAnalysisResult:
     ]
 
     # Получаем анализ блюда с помощью OpenAI API
-    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
+    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, user_id=user_id, max_tokens=MAX_DESCRIPTION_TOKENS)
 
     if not meal_analysis.is_food:
         # если блюдо не еда, возвращаем результат с нулевыми значениями
@@ -156,7 +173,7 @@ async def analyze_food_voice(file_url : str, user_id : int) -> MealAnalysisResul
     ]
 
     # Получаем анализ блюда с помощью OpenAI API
-    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS, growth_tokens=300)
+    meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, user_id=user_id, max_tokens=MAX_DESCRIPTION_TOKENS, growth_tokens=300)
 
     if not meal_analysis.is_food:
         # если блюдо не еда, возвращаем результат с нулевыми значениями
@@ -182,7 +199,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
     """
 
     # Получаем оригинальное блюдо
-    original_meal : Meal = await Meal.get(id=meal_id).prefetch_related("ingredients")
+    original_meal : Meal = await Meal.get(id=meal_id).select_related("user").prefetch_related("ingredients")
 
     # Создаём предыдущее описание блюда для контекста
     prev_description : str = BOT_MEAL_REPORT.format(
@@ -219,7 +236,16 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
     ]
 
     # Получаем новый анализ блюда через openai
-    new_meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, max_tokens=MAX_DESCRIPTION_TOKENS)
+    try:
+        new_meal_analysis : MealAnalysis = await get_meal_analysis(messages=messages, user_id=original_meal.user.id, max_tokens=MAX_DESCRIPTION_TOKENS)
+    except ReportLimitExceeded as e:
+        return MealAnalysisResult(
+            report=prev_description,
+            meal_id=meal_id,
+            is_food=False,
+            description=f"❗ Вы превысили лимит: не более {e.max_limit} анализов за {e.hours} ч. Попробуйте позже."
+        )
+
 
     if not new_meal_analysis.is_food:
         # если блюдо не еда, возвращаем результат с нулевыми значениями
@@ -427,7 +453,7 @@ async def get_available_report_dates(user_id: int) -> tuple[date, date]:
 
 
 
-async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str = "gpt-4o", retries : int = 2, growth_tokens : int = 200) -> MealAnalysis:
+async def get_meal_analysis(messages : list[dict], user_id : int, max_tokens : int, model : str = "gpt-4o", retries : int = 2, growth_tokens : int = 200) -> MealAnalysis:
     """
     Отправляет запрос к OpenAI API для анализа блюда.
     
@@ -440,7 +466,12 @@ async def get_meal_analysis(messages : list[dict], max_tokens : int, model : str
     """
     # TODO: Сделать проверку на превышение лимита токенов openai
     
+    
     logger.info("="*50)
+    logger.info("Проверяем лимиттер запросов")
+    
+    await check_limit_reports(user_id=user_id, limit=REPORT_CONFIG.LIMIT, hours=REPORT_CONFIG.HOURS)
+
     logger.info("Начинаем анализ блюда...")
     logger.info(f"Используем модель: {model}")
 

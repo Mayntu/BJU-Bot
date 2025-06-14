@@ -24,6 +24,7 @@ from bot.states.food_analyze import FoodAnalyzeState
 from bot.states.user import GoalState, TimezoneState
 from bot.config import SET_GOAL_TEXT
 from bot.middlewares.payments import SubscriptionMiddleware
+from bot.exceptions.user import ReportLimitExceeded
 
 
 router : Router = Router()
@@ -45,7 +46,8 @@ async def handle_edit_text(message : Message, state : FSMContext):
     result : MealAnalysisResult = await analyze_edit_food_text(meal_id=meal_id, description=new_meal_description)
 
     if not result.is_food:
-        await message.answer(text="❗ Описание не относится к еде, пожалуйста, проверьте введённые данные", parse_mode="HTML")
+        text = result.description if result.description else "❗ Описание не относится к еде, пожалуйста, проверьте введённые данные"
+        await message.answer(text=text, parse_mode="HTML")
     
     text : str = result.report
     meal_id : str = result.meal_id
@@ -83,7 +85,8 @@ async def handle_edit_voice(message : Message, state : FSMContext):
     result : MealAnalysisResult = await analyze_edit_food_voice(meal_id=meal_id, file_url=voice_file_url)
     
     if not result.is_food:
-        await message.answer(text="❗ Описание не относится к еде, пожалуйста, проверьте введённые данные", parse_mode="HTML")
+        text = result.description if result.description else "❗ Описание не относится к еде, пожалуйста, проверьте введённые данные"
+        await message.answer(text=text, parse_mode="HTML")
     
     text : str = result.report
     meal_id : str = result.meal_id
@@ -138,7 +141,8 @@ async def meal_delete_callback(callback_query : CallbackQuery, state : FSMContex
     meal_id : str = callback_query.data.split(":")[1]
     await callback_query.message.delete_reply_markup()
     await delete_food(meal_id=meal_id)
-    await callback_query.answer()
+    await callback_query.answer(text="✅ Блюдо успешно удалено")
+    await callback_query.message.answer(text="✅ Блюдо успешно удалено")
     await state.clear()
 
 
@@ -215,6 +219,9 @@ async def handle_photo(message : Message):
 
     try:
         result : MealAnalysisResult = await analyze_food_image(file_url=photo_url, user_id=message.from_user.id)
+    except ReportLimitExceeded as e:
+        result : MealAnalysisResult = MealAnalysisResult(f"❗ Вы превысили лимит: не более {e.max_limit} анализов за {e.hours} ч. Попробуйте позже.", None, False)
+        logger.error(f"Ошибка при анализе текста: {e}")
     except Exception as e:
         result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None, False)
         logger.error(f"Ошибка при анализе фото: {e}")
@@ -240,6 +247,9 @@ async def handle_text(message : Message):
             text=message.text,
             user_id=message.from_user.id
         )
+    except ReportLimitExceeded as e:
+        result : MealAnalysisResult = MealAnalysisResult(f"❗ Вы превысили лимит: не более {e.max_limit} анализов за {e.hours} ч. Попробуйте позже.", None, False)
+        logger.error(f"Ошибка при анализе текста: {e}")
     except Exception as e:
         result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None, False)
         logger.error(f"Ошибка при анализе текста: {e}")
@@ -271,6 +281,9 @@ async def handle_voice(message : Message):
             file_url=voice_file_url,
             user_id=message.from_user.id
         )
+    except ReportLimitExceeded as e:
+        result : MealAnalysisResult = MealAnalysisResult(f"❗ Вы превысили лимит: не более {e.max_limit} анализов за {e.hours} ч. Попробуйте позже.", None, False)
+        logger.error(f"Ошибка при анализе текста: {e}")
     except Exception as e:
         result : MealAnalysisResult = MealAnalysisResult(f"❗ Возникла ошибка при попытке распознования", None, False)
         logger.error(f"Ошибка при анализе голоса: {e}")

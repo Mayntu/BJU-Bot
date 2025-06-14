@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 from datetime import date
 
 
@@ -35,8 +35,9 @@ class MealAnalysis(BaseModel):
 @dataclass
 class MealAnalysisResult:
     """
-    Результат анализа блюда, содержащий отчёт и ID блюда.
+    Результат анализа блюда, содержащий отчёт, ID блюда, блюдо ли это и описание ошибки если есть.
     """
     report : str
     meal_id : str
     is_food : bool
+    description: Optional[str] = None

@@ -58,6 +58,16 @@ class S3Config(BaseSettings):
 S3_CONFIG : S3Config = S3Config()
 
 
+class ReportConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix='REPORT_', env_file=".env", extra="ignore")
+    
+    LIMIT: int
+    HOURS: int
+
+
+REPORT_CONFIG : ReportConfig = ReportConfig()
+
+
 # ------------------- Enum'ы ------------------- #
 
 class SubscriptionsStore(Enum):

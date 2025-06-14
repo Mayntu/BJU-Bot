@@ -1,9 +1,13 @@
 import pytz
 
 from datetime import datetime, date, timedelta, timezone
+from functools import wraps
 
 from db.models import User
 from bot.services.logger import logger
+from bot.redis.client import redis_client
+from bot.exceptions.user import ReportLimitExceeded
+from bot.config import REPORT_CONFIG
 
 
 async def create_user_if_not_exists(user_id: int, username: str) -> User:
@@ -63,6 +67,23 @@ async def update_user_timezone(user_id : int, tz_name : str) -> None:
     user.timezone = tz_name
     user.timezone_setted = True
     await user.save()
+
+
+async def check_limit_reports(user_id : int, limit : int = REPORT_CONFIG.LIMIT, hours : int = REPORT_CONFIG.HOURS):
+    now = datetime.now(timezone.utc)
+    # округляем время до часа, получаем префикс на каждый N-часовой слот
+    window_key = now.strftime('%Y-%m-%dT%H')
+    redis_key = f"user:{user_id}:limit:{window_key}:h{hours}"
+
+    current = await redis_client.get(redis_key)
+    current = int(current) if current else 0
+
+    if current >= limit:
+        raise ReportLimitExceeded(hours=hours, max_limit=limit)
+
+    # инкрементируем и устанавливаем TTL
+    await redis_client.incr(redis_key)
+    await redis_client.expire(redis_key, hours * 3600)
 
 
 
