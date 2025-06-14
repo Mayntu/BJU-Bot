@@ -1,6 +1,8 @@
+import aiohttp
+import warnings
+
 from bot.config import IMGBB_API_KEY
 
-import aiohttp
 
 async def get_image_bytes(image_url: str) -> bytes:
     """
@@ -22,13 +24,17 @@ async def upload_to_imgbb(image_bytes: bytes) -> str:
 
     :param image_bytes: Двоичные данные изображения
     :return: URL загруженного изображения
-    """
-    upload_url = "https://api.imgbb.com/1/upload"
 
-    data = {
-        "key": IMGBB_API_KEY,
-        "image": image_bytes.encode("base64") if isinstance(image_bytes, str) else image_bytes,
-    }
+    .. deprecated:: 1.0
+        Эта функция устарела и будет удалена в будущих версиях.
+    """
+    warnings.warn(
+        "upload_to_imgbb будет deprecated и будет убрана в будущих версиях.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+
+    upload_url = "https://api.imgbb.com/1/upload"
 
     async with aiohttp.ClientSession() as session:
         data = aiohttp.FormData()

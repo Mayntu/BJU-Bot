@@ -6,7 +6,7 @@ from bot.config import MAX_IMAGE_TOKENS, MAX_DESCRIPTION_TOKENS, BOT_MEAL_REPORT
 from bot.services.logger import logger
 from bot.services.openai_client import client
 from bot.redis.client import redis_client
-from bot.services.images_handler import get_image_bytes, upload_to_imgbb
+from bot.services.images_handler import get_image_bytes
 from bot.services.voice_transcription import get_voice_path, transcribe_audio, close_voice_file
 from db.models import User, Meal, Ingredient, UserDailyReport, UserDailyMeal
 from bot.schemas.food_analyze import IngredientAnalysis, MealAnalysis, MealAnalysisResult
@@ -18,6 +18,7 @@ from bot.prompts.food_analyze import (
     edit_food_analysis_by_description_system_prompt,
     edit_food_analysis_by_description_user_prompt,
 )
+from bot.s3.service import upload_image
 
 
 async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResult:
@@ -33,7 +34,8 @@ async def analyze_food_image(file_url : str, user_id : int) -> MealAnalysisResul
     image_bytes : bytes = await get_image_bytes(image_url=file_url)
 
     # Получаем публичную ссылку на изображение в Imgbb
-    image_url = await upload_to_imgbb(image_bytes=image_bytes)
+    image_url : str = await upload_image(image_bytes=image_bytes, user_id=user_id)
+    logger.info(f"s3 image url : {image_url}")
 
     # Контекст для запроса к OpenAI
     messages : list[dict] = [

@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from enum import Enum
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 load_dotenv()
 
@@ -42,7 +43,22 @@ OFERTA_FILE_ID : str = os.getenv("OFERTA_FILE_ID")
 LOCALE : str = os.getenv("LOCALE", "ru_RU")
 
 
-# ------------------- Варианты подписок ------------------- #
+# ------------------- Pydantic BaseSettings переменные окружения ------------------- #
+
+class S3Config(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix='S3_', env_file=".env", extra="ignore")
+    
+    ENDPOINT_URL: str
+    ACCESS_KEY: str
+    SECRET_KEY: str
+    BUCKET_NAME: str
+    REGION: str = "ru-1"
+
+
+S3_CONFIG : S3Config = S3Config()
+
+
+# ------------------- Enum'ы ------------------- #
 
 class SubscriptionsStore(Enum):
     """
