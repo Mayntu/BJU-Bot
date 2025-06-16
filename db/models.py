@@ -19,7 +19,7 @@ from bot.config import YOOKASSA_PAYMENT_STATUS
 
 class User(Model):
     id = BigIntField(pk=True)
-    username = CharField(max_length=255, unique=True)
+    username = CharField(max_length=255)
     timezone = CharField(max_length=64, default="UTC")
     meal_count = IntField(default=0)
     calorie_goal = FloatField(default=2000.0)
