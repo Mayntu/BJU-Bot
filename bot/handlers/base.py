@@ -4,9 +4,9 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 
 from bot.config import BUY_TEXT, HELLO_TEXT, HELP_TEXT, SUBSCRIBE_TEXT, OFERTA_FILE_ID
-from bot.schemas.payments import CreatePaymentTicketResponse
-from bot.services.user import create_user_if_not_exists, get_timezone_by_offset, update_user_timezone
+from bot.services.user import create_user_if_not_exists, get_timezone_by_offset, update_user_timezone, save_utm_source_if_not_exists
 from bot.services.payments import create_payment_ticket, check_payment_status, cancel_pending_payment
+from bot.services.utm import parse_utm_source
 from bot.services.logger import logger
 from bot.keyboards.menu import (
     get_subscriptions_menu,
@@ -117,10 +117,23 @@ async def handle_timezone_choice(callback: CallbackQuery, state: FSMContext):
 # Обработка команды /start
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
+    user_id : int = message.from_user.id
+
     await create_user_if_not_exists(
-        user_id=message.from_user.id,
+        user_id=user_id,
         username=message.from_user.username or "Unknown"
     )
+
+    payload = message.text.split(" ", 1)
+    start_param = payload[1] if len(payload) > 1 else ""
+
+    utm_source : str = parse_utm_source(start_param=start_param)
+
+    await save_utm_source_if_not_exists(
+        user_id=user_id,
+        utm_source=utm_source
+    )
+
     await message.answer(
         text=HELLO_TEXT,
         reply_markup=get_keyboard_remove()

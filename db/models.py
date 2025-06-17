@@ -26,6 +26,8 @@ class User(Model):
     timezone_setted = BooleanField(default=False)
     # subscription = CharField(max_length=32, default="free")
 
+    utm_source = CharField(max_length=255, null=True)
+
     created_at = DatetimeField(auto_now_add=True)
 
     def __str__(self):

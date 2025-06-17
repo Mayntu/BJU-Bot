@@ -27,6 +27,15 @@ async def get_user(user_id : int) -> User:
     return await User.get_or_none(id=user_id)
 
 
+async def save_utm_source_if_not_exists(user_id : int, utm_source) -> None:
+    user : User = await User.get(id=user_id)
+    
+    if user.utm_source: return
+
+    user.utm_source = utm_source
+    await user.save()
+
+
 async def set_calories_goal(user_id : int, goal : str) -> None:
     """
     Устанавливает цель по калориям для пользователя.
