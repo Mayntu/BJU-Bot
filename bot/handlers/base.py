@@ -127,7 +127,8 @@ async def cmd_start(message: Message, state: FSMContext):
     payload = message.text.split(" ", 1)
     start_param = payload[1] if len(payload) > 1 else ""
 
-    utm_source : str = parse_utm_source(start_param=start_param)
+    # utm_source : str = parse_utm_source(start_param=start_param)
+    utm_source : str = start_param
 
     await save_utm_source_if_not_exists(
         user_id=user_id,
