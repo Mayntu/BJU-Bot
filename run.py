@@ -12,8 +12,8 @@ from bot.middlewares.user import UserRegistrationMiddleware
 import db.signals # noqa: F401 # импорт сигналов для регистрации обработчиков
 
 
-bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
-dp = Dispatcher()
+bot : Bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
+dp : Dispatcher = Dispatcher()
 
 dp.message.middleware(UserRegistrationMiddleware())
 

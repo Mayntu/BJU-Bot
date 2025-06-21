@@ -4,8 +4,8 @@ from datetime import datetime, timedelta
 from tortoise.transactions import in_transaction
 from tortoise.functions import Sum
 
-from bot.config import REDIS_KEYS
-from db.models import User, Meal, UserDailyReport, UserDailyMeal
+from bot.config import REDIS_KEYS, YOOKASSA_PAYMENT_STATUS, TRIAL_NOTIFICATION_MESSAGE
+from db.models import User, Meal, UserDailyReport, UserDailyMeal, Payment
 from bot.services.logger import logger
 from bot.redis.client import redis_client
 
@@ -93,3 +93,44 @@ async def update_daily_report(ctx, user_id: str):
     await redis_client.delete(redis_key)
 
     logger.info(f"Обновлён дневной отчёт и список приёмов пищи для пользователя: {user_id} — {today_start.date()}")
+
+
+async def notify_users_trial_ending(ctx):
+    now = datetime.now(pytz.UTC)
+    target_date = (now - timedelta(days=2)).date()
+
+    start_dt = datetime.combine(target_date, datetime.min.time(), tzinfo=pytz.UTC)
+    end_dt = datetime.combine(target_date, datetime.max.time(), tzinfo=pytz.UTC)
+
+    users = await User.filter(created_at__gte=start_dt, created_at__lte=end_dt)
+
+    logger.info(f"[TRIAL END] Пользователей с регистрацией {target_date}: {len(users)}")
+
+    for user in users:
+        logger.info(f"[TRIAL END] user_id={user.id}, created_at={user.created_at}")
+
+        # Пропускаем с активной подпиской
+        has_active = await Payment.filter(
+            user=user,
+            status=YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value,
+            user_subscription__start_date__lte=now.date(),
+            user_subscription__end_date__gte=now.date()
+        ).exists()
+        if has_active:
+            logger.info(f"[TRIAL END] user_id={user.id} — активная подписка, пропускаем.")
+            continue
+
+        # Пропускаем, если когда-либо платил
+        had_subscription = await Payment.filter(
+            user=user,
+            status=YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value
+        ).exists()
+        if had_subscription:
+            logger.info(f"[TRIAL END] user_id={user.id} — уже была подписка ранее, пропускаем.")
+            continue
+
+        try:
+            await ctx['bot'].send_message(user.id, TRIAL_NOTIFICATION_MESSAGE)
+            logger.info(f"[TRIAL END] Уведомление отправлено user_id={user.id}")
+        except Exception as e:
+            logger.warning(f"[!] Ошибка при отправке user_id={user.id}: {e}")

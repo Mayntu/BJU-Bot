@@ -38,6 +38,7 @@ RECEIPT_EMAIL : str = os.getenv("RECEIPT_EMAIL")
 MAX_IMAGE_TOKENS : str = int(os.getenv("MAX_IMAGE_TOKENS", 1000))
 MAX_DESCRIPTION_TOKENS : int = int(os.getenv("MAX_DESCRIPTION_TOKENS", 300))
 FREE_MEAL_COUNT : int = int(os.getenv("FREE_MEAL_COUNT", 5))
+FREE_TRIAL_DAYS : int = int(os.getenv("FREE_TRIAL_DAYS", 3))
 OFERTA_FILE_ID : str = os.getenv("OFERTA_FILE_ID")
 
 LOCALE : str = os.getenv("LOCALE", "ru_RU")
@@ -273,6 +274,16 @@ SUBSCRIBE_TEXT : str = """
 💳 Выберите срок подписки:
 """
 
-FREE_MEAL_END_MESSAGE : str = "К сожалению, бесплатные запросы закончились! Оформите подписку /subscribe"
+FREE_MEAL_END_MESSAGE : str = """⚠️ К сожалению, бесплатный пробный период закончился!
+
+Оформите подписку /subscribe"""
 
 SUBSCRIPTION_NOT_ACTIVE_MESSAGE : str = "❌ Подписка не активна. Пожалуйста, оплатите подписку. /subscribe"
+
+TRIAL_NOTIFICATION_MESSAGE = (
+    "❗️Пробный период Тарелки заканчивается сегодня.\n\n"
+    "С завтрашнего дня бот станет недоступен без подписки.\n\n"
+    "Хочешь продолжить пользоваться ботом?\n"
+    "Оформи подписку и я буду рядом 💚 в каждый прием пищи\n"
+    "всего за 270 руб. в месяц. /subscribe"
+)

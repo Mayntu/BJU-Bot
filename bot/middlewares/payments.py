@@ -2,11 +2,12 @@ import pytz
 
 from aiogram import BaseMiddleware
 from aiogram.types import CallbackQuery, Message
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from db.models import User, Payment
 from bot.config import (
     FREE_MEAL_COUNT,
+    FREE_TRIAL_DAYS,
     FREE_MEAL_END_MESSAGE,
     SUBSCRIPTION_NOT_ACTIVE_MESSAGE,
     YOOKASSA_PAYMENT_STATUS
@@ -40,36 +41,31 @@ class SubscriptionMiddleware(BaseMiddleware):
                 await event.answer("❌ Пользователь не найден. Пожалуйста, зарегистрируйтесь.")
             return
         
-        if user.meal_count > FREE_MEAL_COUNT:
-            now_utc = datetime.now(pytz.UTC).date()
-            payment = await Payment.filter(
-                user=user,
-                status=YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value,
-                user_subscription__start_date__lte=now_utc,
-                user_subscription__end_date__gte=now_utc
-            ).first()
+        now = datetime.now(pytz.UTC)
 
-            if payment:
-                return await handler(event, data)
-            else:
-                # Проверяем, была ли вообще когда-то подписка
-                had_subscription = await Payment.filter(
-                    user=user,
-                    status=YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value
-                ).exists()
-                if had_subscription:
-                    # Подписка была, но закончилась
-                    msg = SUBSCRIPTION_NOT_ACTIVE_MESSAGE
-                else:
-                    # Никогда не было подписки
-                    msg = FREE_MEAL_END_MESSAGE
+        payment = await Payment.filter(
+            user=user,
+            status=YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value,
+            user_subscription__start_date__lte=now.date(),
+            user_subscription__end_date__gte=now.date()
+        ).first()
 
-                if isinstance(event, CallbackQuery):
-                    await event.answer(msg, show_alert=True)
-                    await event.message.answer(msg)
-                elif isinstance(event, Message):
-                    await event.answer(msg)
-                return
-
-        else:
+        if payment:
             return await handler(event, data)
+
+        had_subscription = await Payment.filter(
+            user=user,
+            status=YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value
+        ).exists()
+
+        if not had_subscription and user.created_at and (now - user.created_at) < timedelta(days=FREE_TRIAL_DAYS):
+            return await handler(event, data)
+
+        msg = SUBSCRIPTION_NOT_ACTIVE_MESSAGE if had_subscription else FREE_MEAL_END_MESSAGE
+
+        if isinstance(event, CallbackQuery):
+            await event.answer(msg, show_alert=True)
+            await event.message.answer(msg)
+        elif isinstance(event, Message):
+            await event.answer(msg)
+        return
