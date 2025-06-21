@@ -85,7 +85,7 @@ def get_timezone_offset_keyboard() -> InlineKeyboardMarkup:
 async def set_bot_commands(bot: Bot):
     commands = [
         BotCommand(command="start", description="Начать"),
-        BotCommand(command="stats", description="Статистика"),
+        BotCommand(command="stats", description="Статистика за день"),
         BotCommand(command="set_goal", description="Цель по калориям"),
         BotCommand(command="subscribe", description="Тарифы"),
         BotCommand(command="help", description="Помощь"),
