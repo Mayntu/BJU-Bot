@@ -97,7 +97,7 @@ async def update_daily_report(ctx, user_id: str):
 
 async def notify_users_trial_ending(ctx):
     now = datetime.now(pytz.UTC)
-    target_date = (now - timedelta(days=2)).date()
+    target_date = (now - timedelta(days=3)).date()
 
     start_dt = datetime.combine(target_date, datetime.min.time(), tzinfo=pytz.UTC)
     end_dt = datetime.combine(target_date, datetime.max.time(), tzinfo=pytz.UTC)
