@@ -1,9 +1,10 @@
 from arq import cron
 from arq.connections import RedisSettings
 from tortoise import Tortoise
+from datetime import date
 
 from bot.arq.redis_pool import init_redis_pool, close_redis_pool
-from bot.arq.tasks import update_daily_report, notify_users_trial_ending
+from bot.arq.tasks import update_daily_report, notify_users_trial_ending, notify_old_users_about_system_change
 from bot.config import TORTOISE_ORM, REDIS_HOST, REDIS_PORT
 from run import bot
 
@@ -20,9 +21,14 @@ async def shutdown(ctx):
 
 class WorkerSettings:
     redis_settings = RedisSettings(host=REDIS_HOST, port=REDIS_PORT, password=None)
-    functions = [update_daily_report, notify_users_trial_ending]
+    functions = [update_daily_report, notify_users_trial_ending, notify_old_users_about_system_change]
     on_startup = startup
     on_shutdown = shutdown
     cron_jobs = [
         cron(notify_users_trial_ending, hour=10, minute=0),  # каждый день в 10:00 UTC
+        cron(
+        notify_old_users_about_system_change,
+        hour=10,
+        minute=0
+    ),
     ]

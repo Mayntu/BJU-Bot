@@ -1,6 +1,6 @@
 import pytz
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from tortoise.transactions import in_transaction
 from tortoise.functions import Sum
 
@@ -8,6 +8,37 @@ from bot.config import REDIS_KEYS, YOOKASSA_PAYMENT_STATUS, TRIAL_NOTIFICATION_M
 from db.models import User, Meal, UserDailyReport, UserDailyMeal, Payment
 from bot.services.logger import logger
 from bot.redis.client import redis_client
+from run import bot
+
+
+EXCLUDED_ID = 5130573596
+ONE_TIME_NOTIFICATION_TEXT = """Твой пробный период в Тарелке закончился 💚
+
+Я больше не могу считать калории и вести дневник...
+Но всё легко вернуть — просто оформи подписку, и мы продолжим!
+
+✅ Подсчёт, анализ, дневник — без ограничений
+💳 Всего 270₽ в месяц
+
+👉 /subscribe — оформить подписку
+"""
+
+async def notify_old_users_about_system_change(ctx):
+    if date.today() != date(2025, 6, 22):
+        logger.info("[NOTIFY_OLD] Сегодня не 22 июня, задача не выполняется.")
+        return
+
+    logger.info("[NOTIFY_OLD] Рассылаем уведомления старым пользователям")
+    users = await User.filter().exclude(id=EXCLUDED_ID)
+    logger.info(f"[NOTIFY_OLD] Всего пользователей: {len(users)}")
+
+    for user in users:
+        try:
+            await ctx['bot'].send_message(user.id, ONE_TIME_NOTIFICATION_TEXT)
+            logger.info(f"[NOTIFY_OLD] Уведомление отправлено user_id={user.id}")
+        except Exception as e:
+            logger.warning(f"[NOTIFY_OLD] Ошибка при отправке user_id={user.id}: {e}")
+    
 
 
 async def update_daily_report(ctx, user_id: str):
