@@ -12,6 +12,7 @@ from bot.config import (
     SUBSCRIPTION_NOT_ACTIVE_MESSAGE,
     YOOKASSA_PAYMENT_STATUS
 )
+from bot.services.logger import logger
 
 
 class SubscriptionMiddleware(BaseMiddleware):
@@ -50,7 +51,9 @@ class SubscriptionMiddleware(BaseMiddleware):
             user_subscription__end_date__gte=now.date()
         ).first()
 
+        logger.info(f"{payment}")
         if payment:
+            logger.info("ok")
             return await handler(event, data)
 
         had_subscription = await Payment.filter(
@@ -58,14 +61,21 @@ class SubscriptionMiddleware(BaseMiddleware):
             status=YOOKASSA_PAYMENT_STATUS.SUCCEEDED.value
         ).exists()
 
+        logger.info(f"had_subscription : {had_subscription}")
+
         if not had_subscription and user.created_at and (now - user.created_at) < timedelta(days=FREE_TRIAL_DAYS):
+            logger.info("ok2")
             return await handler(event, data)
 
         msg = SUBSCRIPTION_NOT_ACTIVE_MESSAGE if had_subscription else FREE_MEAL_END_MESSAGE
 
         if isinstance(event, CallbackQuery):
+            logger.info("ok3")
             await event.answer(msg, show_alert=True)
             await event.message.answer(msg)
         elif isinstance(event, Message):
+            logger.info("ok3")
             await event.answer(msg)
+        
+        logger.info("return")
         return

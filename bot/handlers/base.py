@@ -52,25 +52,25 @@ async def handle_subscription(callback_query : CallbackQuery):
     )
 
 
-@router.callback_query(F.data.startswith("subscription_payment_id:"))
-async def handle_subscription_payment(callback_query : CallbackQuery):
-    payment_id : str = callback_query.data.split(":")[1]
+# @router.callback_query(F.data.startswith("subscription_payment_id:"))
+# async def handle_subscription_payment(callback_query : CallbackQuery):
+#     payment_id : str = callback_query.data.split(":")[1]
     
-    await callback_query.answer(f"Проверка платежа {payment_id}...")
+#     await callback_query.answer(f"Проверка платежа {payment_id}...")
     
-    # Проверяем статус платежа
-    # Если платеж подтвержден, отправляем сообщение об успешной подписке
-    if await check_payment_status(payment_id=payment_id):
-        await callback_query.message.answer(
-            "✅ Платеж успешно подтвержден! Спасибо за подписку!"
-        )
-        await callback_query.message.delete()
-        return
+#     # Проверяем статус платежа
+#     # Если платеж подтвержден, отправляем сообщение об успешной подписке
+#     if await check_payment_status(payment_id=payment_id):
+#         await callback_query.message.answer(
+#             "✅ Платеж успешно подтвержден! Спасибо за подписку!"
+#         )
+#         await callback_query.message.delete()
+#         return
     
-    # Если платеж не подтвержден, отправляем сообщение об ошибке
-    await callback_query.message.answer(
-        "❌ Платеж не совершён или не подтвержден. Попробуйте еще раз."
-    )
+#     # Если платеж не подтвержден, отправляем сообщение об ошибке
+#     await callback_query.message.answer(
+#         "❌ Платеж не совершён или не подтвержден. Попробуйте еще раз."
+#     )
 
 
 @router.callback_query(F.data == "cancel_payment")

@@ -203,7 +203,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
 
     # Создаём предыдущее описание блюда для контекста
     prev_description : str = BOT_MEAL_REPORT.format(
-        meal_name=original_meal.name,
+        meal_name=original_meal.name.capitalize(),
         meal_weight=original_meal.total_weight,
         meal_ccal=int(original_meal.total_calories),
         meal_protein=original_meal.total_protein,
@@ -213,7 +213,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
     )
 
     for ingredient in original_meal.ingredients:
-        prev_description += f"\n{ingredient.name} - {ingredient.weight} г | {ingredient.calories} ккал | Б: {ingredient.protein} г | Ж: {ingredient.fat} г | У: {ingredient.carbs} г | Кл: {ingredient.fiber} г"
+        prev_description += f"\n• {ingredient.name.capitalize()} - {ingredient.weight} г | {ingredient.calories} ккал | Б: {ingredient.protein} г | Ж: {ingredient.fat} г | У: {ingredient.carbs} г | Кл: {ingredient.fiber} г"
 
     prev_description += "\n\n✅ Данные сохранены в дневную статистику"
     # Контекст для запроса к openai
@@ -273,7 +273,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
 
     # Формируем новый отчет о блюде
     new_report : str = BOT_MEAL_REPORT.format(
-        meal_name=original_meal.name,
+        meal_name=original_meal.name.capitalize(),
         meal_weight=original_meal.total_weight,
         meal_ccal=int(original_meal.total_calories),
         meal_protein=original_meal.total_protein,
@@ -294,7 +294,7 @@ async def analyze_edit_food_text(meal_id : str, description : str) -> MealAnalys
             carbs=ingredient.carbs,
             fiber=ingredient.fiber
         )
-        new_report += f"\n{ingredient.name} - {ingredient.weight} г | {ingredient.calories} ккал | Б: {ingredient.protein} г | Ж: {ingredient.fat} г | У: {ingredient.carbs} г | Кл: {ingredient.fiber} г"
+        new_report += f"\n• {ingredient.name.capitalize()} - {ingredient.weight} г | {ingredient.calories} ккал | Б: {ingredient.protein} г | Ж: {ingredient.fat} г | У: {ingredient.carbs} г | Кл: {ingredient.fiber} г"
 
     new_report += "\n\n✅ Данные сохранены в дневную статистику"
     return MealAnalysisResult(report=new_report, meal_id=meal_id, is_food=new_meal_analysis.is_food)
@@ -540,7 +540,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
     logger.info("Формируем отчет о блюде...")
     # Формируем отчет о блюде
     result : str = BOT_MEAL_REPORT.format(
-        meal_name=meal.name,
+        meal_name=meal.name.capitalize(),
         meal_weight=meal.total_weight,
         meal_ccal=int(meal.total_calories),
         meal_protein=meal.total_protein,
@@ -562,7 +562,7 @@ async def save_meal_to_db_and_get_report(meal_analysis : MealAnalysis, user_id :
             fiber=ingredient.fiber,
         )
         await ingredient_model.save()
-        result += f"\n{ingredient.name} - {ingredient.weight} г | {ingredient.calories} ккал | Б: {ingredient.protein} г | Ж: {ingredient.fat} г | У: {ingredient.carbs} г | Кл: {ingredient.fiber} г"
+        result += f"\n• {ingredient.name.capitalize()} - {ingredient.weight} г | {ingredient.calories} ккал | Б: {ingredient.protein} г | Ж: {ingredient.fat} г | У: {ingredient.carbs} г | Кл: {ingredient.fiber} г"
 
     result += "\n\n✅ Данные сохранены в дневную статистику"
     logger.info(f"Для пользователя {user_id} было проанализировано блюдо: {meal.name} и сохранено в БД.")

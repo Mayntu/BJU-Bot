@@ -45,7 +45,7 @@ def get_subscription_confirmation_menu(url : str, payment_id : str) -> InlineKey
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="💳 Оплатить", url=url),
-            InlineKeyboardButton(text="🔍 Проверить", callback_data=f"subscription_payment_id:{payment_id}"),
+            # InlineKeyboardButton(text="🔍 Проверить", callback_data=f"subscription_payment_id:{payment_id}"),
             InlineKeyboardButton(
                 text="❌ Отменить платёж",
                 callback_data="cancel_payment"

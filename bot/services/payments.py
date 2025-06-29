@@ -1,3 +1,5 @@
+import warnings
+
 from tortoise.transactions import in_transaction
 from yookassa import Configuration, Payment as YooPayment
 from yookassa.domain.response import PaymentResponse as APIPaymentResponse
@@ -122,6 +124,10 @@ async def get_ticket(payment_id : str) -> APIPaymentResponse:
                     "payment_subject": "service"
                 }
             ]
+        },
+        "metadata": {
+            "tg_user_id": str(payment.user_id),
+            "payment_id": str(payment_id)
         }
     }, uuid4())
     logger.info(f"Создан платежный тикет: {ticket.id} для платежа {payment_id}")
@@ -144,10 +150,12 @@ async def cancel_pending_payment(user_id: int) -> bool:
     # Попытка отмены в YooKassa
     if pending_payment.yookassa_payment_id:
         try:
+            logger.info(f"yookassa_payment_id : {pending_payment.yookassa_payment_id}")
             YooPayment.cancel(pending_payment.yookassa_payment_id)
             logger.info(f"Платёж {pending_payment.yookassa_payment_id} отменён в YooKassa")
         except ApiError as e:
             logger.warning(f"Не удалось отменить платёж в YooKassa: {e}")
+            logger.warning("Возможно refundable в Yookassa API (системно) == True")
         except Exception as e:
             logger.error(f"{e}")
 
@@ -170,7 +178,14 @@ async def check_payment_status(payment_id : str) -> bool:
     
     :param payment_id: ID платежа
     :return: True, если платеж успешен, иначе False
+
+    .. deprecated:: 1.0
     """
+    warnings.warn(
+        "check_payment_status будет deprecated и будет убрана в будущих версиях.",
+        DeprecationWarning,
+        stacklevel=2
+    )
     # Получаем платеж из базы данных
     payment : Payment = await Payment.get_or_none(id=payment_id)
     if not payment:
