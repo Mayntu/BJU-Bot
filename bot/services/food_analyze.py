@@ -412,9 +412,9 @@ async def get_daily_stats(user_id : int, date : date) -> str:
     result : str = BOT_DAILY_MEAL_REPORT.format(
         date=format_date(date=date, format="d MMMM", locale=LOCALE),
         total_calories=format_float(report.total_calories, 0),
-        goal=calorie_goal,
+        goal=int(calorie_goal),
         status=status,
-        status_ccal=abs(diff),
+        status_ccal=int(abs(diff)),
         total_proteins=format_float(report.total_protein),
         total_fats=format_float(report.total_fat),
         total_carbs=format_float(report.total_carbs),
