@@ -37,6 +37,8 @@ RECEIPT_EMAIL : str = os.getenv("RECEIPT_EMAIL")
 
 MAX_IMAGE_TOKENS : str = int(os.getenv("MAX_IMAGE_TOKENS", 1000))
 MAX_DESCRIPTION_TOKENS : int = int(os.getenv("MAX_DESCRIPTION_TOKENS", 300))
+AI_TEMPERATURE : float = float(os.getenv("AI_TEMPERATURE", 0))
+AI_TOP_P : float = float(os.getenv("AI_TOP_P", 1.0))
 FREE_MEAL_COUNT : int = int(os.getenv("FREE_MEAL_COUNT", 5))
 FREE_TRIAL_DAYS : int = int(os.getenv("FREE_TRIAL_DAYS", 3))
 OFERTA_FILE_ID : str = os.getenv("OFERTA_FILE_ID")

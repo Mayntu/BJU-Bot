@@ -8,6 +8,8 @@ from db.models import User, Meal, Ingredient, UserDailyReport, UserDailyMeal
 from bot.config import (
     MAX_IMAGE_TOKENS,
     MAX_DESCRIPTION_TOKENS,
+    AI_TEMPERATURE,
+    AI_TOP_P,
     BOT_MEAL_REPORT,
     BOT_DAILY_MEAL_REPORT,
     LOCALE,
@@ -455,7 +457,7 @@ async def get_available_report_dates(user_id: int) -> tuple[date, date]:
 
 
 
-async def get_meal_analysis(messages : list[dict], user_id : int, max_tokens : int, model : str = "gpt-4o", retries : int = 2, growth_tokens : int = 200) -> MealAnalysis:
+async def get_meal_analysis(messages : list[dict], user_id : int, max_tokens : int, model : str = "gpt-4o", retries : int = 2, growth_tokens : int = 200, temperature : float = AI_TEMPERATURE, top_p : float = AI_TOP_P) -> MealAnalysis:
     """
     Отправляет запрос к OpenAI API для анализа блюда.
     
@@ -464,6 +466,8 @@ async def get_meal_analysis(messages : list[dict], user_id : int, max_tokens : i
     :param model: Модель OpenAI для использования
     :param retries: Количество попыток запроса в случае ошибки
     :param growth_tokens: Количество токенов, на которое будет увеличиваться max_tokens при повторных попытках
+    :param temperature: Температура для генерации текста
+    :param top_p: Top-p для генерации текста
     :return: Объект MealAnalysis с результатами анализа
     """
     # TODO: Сделать проверку на превышение лимита токенов openai
@@ -490,6 +494,8 @@ async def get_meal_analysis(messages : list[dict], user_id : int, max_tokens : i
                 messages=messages,
                 max_tokens=max_tokens,
                 response_format=MealAnalysis,
+                temperature=temperature,
+                top_p=top_p
             )
         
             logger.info("Анализ завершен. Результат:")
